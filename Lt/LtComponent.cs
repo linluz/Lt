@@ -6,7 +6,7 @@ using Rhino.Geometry;
 
 namespace Lt.Analysis
 {/// <summary>
-/// 电池界面 添加渐变范围
+/// 电池界面 添加渐变范围、添加图标、电池简称
 /// </summary>
     public class LtComponent : GH_Component
     {
@@ -29,7 +29,7 @@ namespace Lt.Analysis
             Mesh t0= new Mesh();
             if (!DA.GetData(0, ref t0))
                 return;
-            float h0 = 0;
+            double h0 = 0;
             if (!DA.GetData(1, ref h0))
                 return;
             Color c0=new Color();
@@ -40,7 +40,6 @@ namespace Lt.Analysis
             Mesh t1 = new Mesh();
             foreach (MeshFace f in t0.Faces)
                 t1.Faces.AddFace(f);//把面加入新网格
-
             double min = double.MaxValue;
             double max = double.MinValue;
             foreach (Point3f p in t0.Vertices)
@@ -50,7 +49,7 @@ namespace Lt.Analysis
                 max = Math.Max(max, z);
             }//获取高度范围
             double range = max - min;
-            foreach (Point3f p in t0.Vertices)//判定修正后把点和色彩加入新网格
+            foreach (Point3f p in t0.Vertices)
             {
                 double z = p.Z;
                 if (z > h0)
@@ -60,10 +59,10 @@ namespace Lt.Analysis
                 }
                 else
                 {
-                    t1.Vertices.Add(new Point3f(p.X,p.Y,h0));
+                    t1.Vertices.Add(new Point3f(p.X,p.Y, Convert.ToSingle(h0)));
                     t1.VertexColors.Add(c0);
                 }
-            }
+            }//判定修正后把点和色彩加入新网格
             DA.SetData(0, t1);
         }
         private GH_Gradient gradient = new GH_Gradient(
