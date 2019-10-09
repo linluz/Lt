@@ -6,13 +6,13 @@ using Rhino.Geometry;
 
 namespace Lt.Analysis
 {/// <summary>
-/// 电池界面 添加渐变范围、添加图标、电池简称
+///  电池界面 添加渐变范围、添加图标、关闭预览中的网格线部分
 /// </summary>
-    public class LtComponent : GH_Component
+    public class LTFT : GH_Component
     {
-        public LtComponent()
-          : base("地形网格淹没分析", "地形网格淹没分析","分析被水淹没后的地形状态","Lt", "分析")
-        {}
+        public LTFT()
+          : base("地形网格淹没分析", "LTFT","分析被水淹没后的地形状态","Lt", "分析")
+        {}//Flooded Terrain
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddMeshParameter("地形", "T", "要被淹没的山地地形网格", GH_ParamAccess.item);
@@ -81,4 +81,5 @@ namespace Lt.Analysis
         protected override Bitmap Icon => null;
         public override Guid ComponentGuid => new Guid("84474303-59cb-4248-9015-c5a02098fd99");
     }
+
 }
