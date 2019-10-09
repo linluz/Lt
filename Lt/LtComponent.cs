@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Forms;
+using GH_IO.Serialization;
+using Grasshopper.GUI;
+using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI.Gradient;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Attributes;
 using Rhino.Geometry;
 
 namespace Lt.Analysis
@@ -15,26 +21,28 @@ namespace Lt.Analysis
         {}//Flooded Terrain
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddMeshParameter("地形", "T", "要被淹没的山地地形网格", GH_ParamAccess.item);
-            pManager.AddNumberParameter("高度", "H", "淹没地形的水平面高度", GH_ParamAccess.item);
+            pManager.AddMeshParameter("地形", "Tm", "要被淹没的山地地形网格", GH_ParamAccess.item);
+            pManager.AddNumberParameter("高度", "E", "淹没地形的水平面高度", GH_ParamAccess.item);
             pManager.AddColourParameter("色彩", "C", "被水淹没区域的色彩", GH_ParamAccess.item,Color.FromArgb(52,58,107));
         }
         
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddMeshParameter("地形", "M", "被水淹没后的地形网格", GH_ParamAccess.item);
+            pManager.AddMeshParameter("地形", "Fm", "被水淹没后的地形网格", GH_ParamAccess.item);
         }
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            #region 初始化 获取输入
             Mesh t0= new Mesh();
             if (!DA.GetData(0, ref t0))
                 return;
-            double h0 = 0;
-            if (!DA.GetData(1, ref h0))
+            double e0 = 0;
+            if (!DA.GetData(1, ref e0))
                 return;
             Color c0=new Color();
             if (!DA.GetData(2, ref c0))
                 return;
+            #endregion
             if (t0.Normals.Count == 0)//网格法向
                 t0.Normals.ComputeNormals();
             Mesh t1 = new Mesh();
@@ -52,14 +60,14 @@ namespace Lt.Analysis
             foreach (Point3f p in t0.Vertices)
             {
                 double z = p.Z;
-                if (z > h0)
+                if (z > e0)
                 {
                     t1.Vertices.Add(p);
                     t1.VertexColors.Add(gradient.ColourAt((z - min) / range));
                 }
                 else
                 {
-                    t1.Vertices.Add(new Point3f(p.X,p.Y, Convert.ToSingle(h0)));
+                    t1.Vertices.Add(new Point3f(p.X,p.Y, Convert.ToSingle(e0)));
                     t1.VertexColors.Add(c0);
                 }
             }//判定修正后把点和色彩加入新网格
@@ -78,8 +86,130 @@ namespace Lt.Analysis
                 Color.FromArgb(138,36,36),
             }
         );
-        protected override Bitmap Icon => null;
+        protected override Bitmap Icon => LTResource.山体淹没分析;
         public override Guid ComponentGuid => new Guid("84474303-59cb-4248-9015-c5a02098fd99");
     }
+public class LTSD : GH_Component
+{
+    public LTSD()
+        : base("坡向分析", "LTFT", "山坡地形朝向分析,X轴向为东,Y轴向为北\r\n双击电池图标以切换着色模式", "Lt", "分析")
+    {
+        Num1 = Math.Tan(Math.PI / 8);
+        Num2 = Math.Tan(Math.PI*3 / 8);
+        Shade = false;
+        Message = "顶点着色";
+        }
+    protected override void RegisterInputParams(GH_InputParamManager pManager)
+    {
+        pManager.AddMeshParameter("地形", "Tm", "要进行坡向分析的山地地形网格", GH_ParamAccess.item);
+        pManager.AddColourParameter("色彩", "C", "各向的色彩，请按上、北、东北、东、东南、南、西南、西、西北的顺序连入9个色彩", GH_ParamAccess.list,
+            new List<Color>
+            {
+                Color.FromArgb(219, 219, 219),
+                Color.FromArgb(232, 77, 77),
+                Color.FromArgb(230, 168, 55),
+                Color.FromArgb(227, 227, 59),
+                Color.FromArgb(49, 222, 49),
+                Color.FromArgb(39, 219, 189),
+                Color.FromArgb(51, 162, 222),
+                Color.FromArgb(48, 48, 217),
+                Color.FromArgb(217, 46, 217)
+            });
+        }
+    protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+    {
+        pManager.AddMeshParameter("地形", "Cm", "已根据坡向着色的地形网格", GH_ParamAccess.item);
+    }
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+        #region 初始化 获取输入
+        Mesh t0 = new Mesh();
+        if (!DA.GetData(0, ref t0))
+            return;
+        List<Color> c = new List<Color>(9);
+        if (!DA.GetDataList(1, c))
+            return;
+            #endregion
 
+            Mesh t1 = new Mesh();
+            if (Shade)
+            {
+                if (t0.FaceNormals.Count != t0.Faces.Count)
+                    t0.FaceNormals.ComputeFaceNormals();
+                int numi = 0;
+                int[] fi = {0, 0, 0, 0};
+                for (var i = 0; i < t0.Faces.Count; i++)
+                {
+                    MeshFace f = t0.Faces[i];
+                    Color c1 = c[DShade(t0.FaceNormals[i])];
+                    for (int j = 0; j < (f.IsTriangle ? 3 : 4); j++)
+                    {
+                        fi[j] = numi;
+                        t1.Vertices.Add(t0.Vertices[f[j]]);
+                        t1.VertexColors.Add(c1);
+                        numi++;
+                    }//添加顶点和顶点色
+                    t1.Faces.AddFace(f.IsTriangle ? new MeshFace(fi[0], fi[1], fi[2]) : new MeshFace(fi[0], fi[1], fi[2], fi[3]));
+                }
+            }
+            else
+            {
+                t1 = t0.DuplicateMesh();
+                foreach (Vector3f v in t0.Normals)
+                    t1.VertexColors.Add(c[DShade(v)]);
+            }
+            DA.SetData(0, t1);
+    }
+    public int DShade(Vector3f v)
+    {
+        if (v.X == 0 && v.Y == 0)//上方
+            return 0;
+        double t = Math.Abs(v.Y / v.X);
+        bool x = v.X > 0;
+        bool y = v.Y > 0;
+        if (t < Num1)//东西
+            return x ? 3 : 7;
+        if (t > Num2)//北南
+            return y ? 1 : 5;
+        if (x)//东北、东南
+            return y ? 2 : 4;
+        return y ? 8 : 6;
+        //西北、西南
+    }
+    public override void CreateAttributes()
+    {
+        m_attributes = new LTSD_Attributes(this);
+    }
+    public override bool Write(GH_IWriter writer)
+    {
+        writer.SetBoolean("面色否", Shade);
+        return true;
+    }
+    public override bool Read(GH_IReader reader)
+    {
+        if (!reader.ItemExists("面色否")) return false;
+        Shade = reader.GetBoolean("面色否");
+        return true;
+    }
+    private double Num1;
+    private double Num2;
+    public bool Shade;
+    protected override Bitmap Icon => LTResource.山体坡向分析;
+    public override Guid ComponentGuid => new Guid("3d3ee5a9-c86e-4007-97c6-eb33aa365e27");
+    }
+public class LTSD_Attributes : GH_ComponentAttributes
+{
+    public LTSD_Attributes(IGH_Component component) : base(component)
+    { }
+    public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
+    {
+        if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTSD j)
+        {
+            j.Shade = !j.Shade;
+            j.Message = j.Shade ? "面着色" : "顶点着色";
+            j.ExpireSolution(true);
+        }
+        return GH_ObjectResponse.Handled;
+    }
+}
 }

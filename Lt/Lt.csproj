@@ -58,7 +58,153 @@
   <ItemGroup>
     <Compile Include="LtComponent.cs" />
     <Compile Include="LtInfo.cs" />
+    <Compile Include="LTResource.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>LTResource.resx</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="LTResource.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>LTResource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\CASS方格网法计算土方.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\玻璃栏杆02.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\参与计算的设计高程点汇总.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\单跑楼梯-定台阶.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\单跑楼梯-均匀.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\道路边缘均匀取点.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\等高线高程分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\等高线淹没分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\格栅框架.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\函数起坡.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\简单玻璃栏杆.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\简单横向栏杆.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\简单竖向栏杆.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\建立原始高程点.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\精细格栅.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\均匀坡道.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\璃栏杆01.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\林冠线.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\平铺嵌板-曲面.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\平铺嵌板-网格.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\剖面线起坡.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\倾斜栏杆.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\曲面偏移实体.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\曲线台阶.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\人工硬质场地高程点.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\山路坡度分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\山体高程分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\山体坡度分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\山体坡向分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\山体淹没分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\设计自然土地高程点.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\实时山路绘制反馈.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\视线分析.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\输出-.dat格式.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\双跑楼梯.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\填挖量可视化.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\像素法计算土方.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\小数点位数.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\延伸至曲线.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\云线.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\折面格栅.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\折面框架.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\折线成管.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\自动山路.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\自动山路台阶.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
