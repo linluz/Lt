@@ -8,7 +8,9 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI.Gradient;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
+using Rhino;
 using Rhino.Geometry;
+using Rhino.Geometry.Intersect;
 
 namespace Lt.Analysis
 {/// <summary>
@@ -294,5 +296,90 @@ namespace Lt.Analysis
      }
      protected override Bitmap Icon => LTResource.山体高程分析;
      public override Guid ComponentGuid => new Guid("1afc0549-5308-47ef-b91c-a2eade694250");
+ }
+ public class LTVL : GH_Component
+ {
+     public LTVL() : base("视线分析", "LTVL", "分析在山地某处的可见范围", "Lt", "分析")
+     { }//Terrain Grade
+     protected override void RegisterInputParams(GH_InputParamManager pManager)
+     {
+         pManager.AddMeshParameter("地形", "Mt", "要进行坡度分析的山地地形网格", GH_ParamAccess.item);
+         pManager.AddBrepParameter("障碍物", "O", "阻挡视线的障碍物体", GH_ParamAccess.list);
+         pManager.AddPointParameter("观察点", "P", "观察者所在的点位置（不一定在网格上）", GH_ParamAccess.item);
+         pManager.AddIntegerParameter("精度", "A", "分析精度，即分析点阵内的间距", GH_ParamAccess.item);
+        }
+     protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+     {
+         pManager.AddPointParameter("观察点", "O", "观察者视点位置（眼高1m5）", GH_ParamAccess.item);
+         pManager.AddPointParameter("可见点", "V", "被看见的点", GH_ParamAccess.list);
+        }
+
+     protected override void SolveInstance(IGH_DataAccess DA)
+     {
+         Mesh tm = new Mesh();
+         if (!DA.GetData(0, ref tm))
+             return;
+         List<Mesh> o = new List<Mesh>(3);
+         if(DA.GetDataList(1, o))
+             return;
+         Point3d p=new Point3d();
+         if (!DA.GetData(2, ref p))
+             return;
+         int a =0;
+         if (!DA.GetData(3, ref a))
+             return;
+
+         #region 将观测点投影到地形网格上
+         Ray3d rayp = new Ray3d(new Point3d(p.X, p.Y, 0), Vector3d.ZAxis);
+         double pmdp = Intersection.MeshRay(tm, rayp);
+         if (RhinoMath.IsValidDouble(pmdp) && pmdp > 0.0)
+             p = rayp.PointAt(pmdp);
+         else
+         {
+             AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"观测点[{DA.Iteration}]无法被Z向投影至地形网格上");
+             return;
+         }
+         #endregion
+
+         p.Z += 1.5;
+         DA.SetData(0, p);
+
+         #region 制作网格上用于测量的点阵
+         BoundingBox mb = new BoundingBox();
+         foreach (Point3f p3f in tm.Vertices)
+             mb.Union(new Point3d(p3f));
+         double px = mb.Min.X;
+         double py = mb.Min.Y;
+         int rx = (int)Math.Ceiling((mb.Max.X - px) / a);
+         int ry = (int)Math.Ceiling((mb.Max.Y - py) / a);
+         List<Point3d> grid = new List<Point3d>(rx * ry);
+         for (int ix = 0; ix < rx; ix++)
+         {
+             for (int iy = 0; iy < ry; iy++)
+             {
+                 Ray3d ray = new Ray3d(new Point3d(px, py, 0), Vector3d.ZAxis);
+                 double pmd = Intersection.MeshRay(tm, ray);
+                 if (RhinoMath.IsValidDouble(pmd) && pmd > 0.0)
+                     grid.Add(ray.PointAt(pmd));
+                 py += a;
+             }
+             px += a;
+             py = mb.Min.Y;
+         }//制作栅格点阵z射线,与网格相交，交点加入grid
+         #endregion
+
+         foreach (Mesh m in o)//将障碍物附加入网格
+             tm.Append(m);
+         for (var i = grid.Count - 1; i >= 0; i--)
+         {
+             Point3d t = grid[i];
+             if (Intersection.MeshLine(tm, new Line(p, t), out _).Length != 1) //与网格上的点阵交点仅为1的即可见点
+                 grid.RemoveAt(i);
+         }
+         DA.SetDataList(1, grid);
+     }
+        protected override Bitmap Icon => LTResource.视线分析;
+     public override Guid ComponentGuid => new Guid("f5b0968b-4de5-45a6-a82b-744f64787e85");
+     public override GH_Exposure Exposure => GH_Exposure.quarternary;
  }
 }
