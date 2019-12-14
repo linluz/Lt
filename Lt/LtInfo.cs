@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using Grasshopper;
 using Grasshopper.Kernel;
 
 namespace Lt
@@ -8,7 +9,7 @@ namespace Lt
     {
         public override string Name => "Lt";
 
-        public override Bitmap Icon => null;
+        public override Bitmap Icon => LTResource.ltlogo24;
 
         public override string Description => "一些景观方面的工具";
 
@@ -17,5 +18,17 @@ namespace Lt
         public override string AuthorName => "兰亭 & 林师兄";
 
         public override string AuthorContact => "1142060440@qq.com & 329978214@qq.com";
+    }
+    public class AssemblyPriority : GH_AssemblyPriority
+    {
+        // Token: 0x060002BE RID: 702 RVA: 0x00003A7B File Offset: 0x00001C7B
+        public AssemblyPriority()
+        { }
+        // Token: 0x060002BF RID: 703 RVA: 0x0001310C File Offset: 0x0001130C
+        public override GH_LoadingInstruction PriorityLoad()
+        {
+            Instances.ComponentServer.AddCategoryIcon("Lt", LTResource.ltlogo16);
+            return GH_LoadingInstruction.Proceed;
+        }
     }
 }

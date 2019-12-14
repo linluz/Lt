@@ -121,6 +121,12 @@
   <data name="CASS方格网法计算土方" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\CASS方格网法计算土方.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="ltlogo16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\ltlogo16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ltlogo24" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\ltlogo24.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="云线" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\云线.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

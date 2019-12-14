@@ -20,47 +20,22 @@ namespace Lt.Analysis
 {
     /// <summary>
     ///  电池界面 添加渐变范围
-    ///
-    ///视线分析 观测点的尺寸与屏幕有关 颜色
-    ///淹没电池 检查颜色不对应的我那天
+    ///预览 全部改写 为正常的
+    /// 
+    ///等高线高程分析 重写增加烘焙
+    ///淹没电池  渐变不对
     /// </summary>
     public static class Ty
     {
-        /// <summary>
-        /// 绘制网格的预览外露边，用于重写DrawViewportWires内
-        /// </summary>
-        /// <param name="mesh">要绘制的网格</param>
-        /// <param name="component">电池本体，默认输入this</param>
-        /// <param name="args">预览变量，默认输入 args</param>
-        public static void Draw1MeshE1(Mesh mesh, IGH_Component component, IGH_PreviewArgs args)
-        {
-            List<GH_Line> list = new List<GH_Line>();
-            if(mesh==null)return;
-            checked
-            {///获取所有外露边
-                for (int i = 0; i <= mesh.TopologyEdges.Count - 1; i++)
-                {
-                    int[] connectedFaces = mesh.TopologyEdges.GetConnectedFaces(i);
-                    if (connectedFaces.Length == 1)
-                        list.Add(new GH_Line(mesh.TopologyEdges.EdgeLine(i)));
-                }
-            }
-
-            GH_PreviewWireArgs args2 = new GH_PreviewWireArgs(args.Viewport, args.Display,
-                component.Attributes.GetTopLevel.Selected ? args.WireColour_Selected : args.WireColour,
-                args.DefaultCurveThickness);//设置预览变量
-
-            foreach (GH_Line t in list)//绘制线条
-                t.DrawViewportWires(args2);
-        }
         /// <summary>
         /// 绘制预览网格，（仅未被选中时显示伪色），用于重写DrawViewportMeshes内
         /// </summary>
         /// <param name="mesh">要绘制的网格</param>
         /// <param name="component">电池本体，默认输入this</param>
         /// <param name="args">预览变量，默认输入 args</param>
-        public static void Draw1Meshes(Mesh mesh, IGH_Component component, IGH_PreviewArgs args)
+        public static void Draw1Meshes(int a, IGH_Component component, IGH_PreviewArgs args)
         {
+            Mesh mesh = ((GH_Structure<GH_Mesh>)component.Params.Output[a].VolatileData).FlattenData()[0].Value;
             bool set = component.Attributes.GetTopLevel.Selected;
             GH_PreviewMeshArgs args2 = new GH_PreviewMeshArgs(args.Viewport, args.Display, (set ? args.ShadeMaterial_Selected : args.ShadeMaterial), args.MeshingParameters);
             if (mesh == null) return;///避免网格不存在
@@ -69,6 +44,7 @@ namespace Lt.Analysis
             else
                 args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
         }
+
     }/// 通用
     public class LTFT : GH_Component
     {
@@ -124,21 +100,17 @@ namespace Lt.Analysis
                     cm.VertexColors.Add(c0);
                 }
             }//判定修正后把点和色彩加入新网格
-            DA.SetData(0, cm);
-            OutMesh = cm;
-        }
 
+            DA.SetData(0,cm);
+        }
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || !args.Display.SupportsShading) return;///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(OutMesh, this, args);
+            Ty.Draw1Meshes(0, this, args);
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            if (Locked || args.Document.PreviewMode != GH_PreviewMode.Wireframe) return;//跳过锁定或非线框模式
-            Ty.Draw1MeshE1(OutMesh, this, args);
         }
-        private Mesh OutMesh = new Mesh();
         private GH_Gradient gradient = new GH_Gradient(
             new double[] { 0, 1 / 6, 1 / 3, 1 / 2, 2 / 3, 5 / 6, 1 },
             new[]
@@ -195,6 +167,14 @@ namespace Lt.Analysis
             List<Color> c = new List<Color>(9);
             if (!DA.GetDataList(1, c))
                 return;
+            if (c.Count != 9)
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,"输入色彩数量不等于9！不足已补充为最后一项,多出已忽视。");
+                if (c.Count<9)
+                    for (int i = c.Count; i < 9; i++)
+                        c.Add(c[i-1]);
+            }
+
             #endregion
             Mesh cm = new Mesh();
             if (Shade)
@@ -224,19 +204,15 @@ namespace Lt.Analysis
                     cm.VertexColors.Add(c[DShade(v)]);
             }
             DA.SetData(0, cm);
-            OutMesh = cm;
         }
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || !args.Display.SupportsShading) return;///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(OutMesh, this, args);
+            Ty.Draw1Meshes(0, this, args);
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            if (Locked || args.Document.PreviewMode != GH_PreviewMode.Wireframe) return;//跳过锁定或非线框模式
-            Ty.Draw1MeshE1(OutMesh, this, args);
         }
-        private Mesh OutMesh = new Mesh();
         public int DShade(Vector3f v)
         {
             if (v.X == 0 && v.Y == 0)//上方
@@ -321,19 +297,15 @@ namespace Lt.Analysis
                 cm.VertexColors.Add(gradient.ColourAt(ia.NormalizedParameterAt(a)));
             DA.SetData(0, cm);
             DA.SetData(1, ia);
-            OutMesh = cm;
         }
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || !args.Display.SupportsShading) return;///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(OutMesh, this, args);
+            Ty.Draw1Meshes(0, this, args);
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            if (Locked || args.Document.PreviewMode != GH_PreviewMode.Wireframe) return;//跳过锁定或非线框模式
-            Ty.Draw1MeshE1(OutMesh, this, args);
         }
-        private Mesh OutMesh = new Mesh();
         public static GH_Gradient gradient = new GH_Gradient(
             new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
             new[]
@@ -381,19 +353,15 @@ namespace Lt.Analysis
                 cm.VertexColors.Add(LTTG.gradient.ColourAt(ie.NormalizedParameterAt(e)));
             DA.SetData(0, cm);
             DA.SetData(1, ie);
-            OutMesh = cm;
         }
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || !args.Display.SupportsShading) return;///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(OutMesh, this, args);
+            Ty.Draw1Meshes(0, this, args);
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            if (Locked || args.Document.PreviewMode != GH_PreviewMode.Wireframe) return;//跳过锁定或非线框模式
-            Ty.Draw1MeshE1(OutMesh, this, args);
         }
-        private Mesh OutMesh=new Mesh();
         protected override Bitmap Icon => LTResource.山体高程分析;
         public override Guid ComponentGuid => new Guid("1afc0549-5308-47ef-b91c-a2eade694250");
     }/// 高程分析
@@ -404,7 +372,8 @@ namespace Lt.Analysis
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddMeshParameter("地形", "Mt", "要进行坡度分析的山地地形网格,仅支持单项数据", GH_ParamAccess.item);
-            pManager.AddMeshParameter("障碍物", "O", "阻挡视线的障碍物体，,仅支持单列数据", GH_ParamAccess.list);
+            pManager.AddMeshParameter("障碍物", "O", "（可选）阻挡视线的障碍物体，,仅支持单列数据", GH_ParamAccess.list);
+            pManager[1].Optional = true;
             pManager.AddPointParameter("观察点", "P", "观察者所在的点位置（不一定在网格上），支持多点观察,仅支持单列数据", GH_ParamAccess.list);
             pManager.AddIntegerParameter("精度", "A", "分析精度，即分析点阵内的间距,仅支持单项数据", GH_ParamAccess.item);
         }
@@ -422,11 +391,9 @@ namespace Lt.Analysis
                 return;
             }
             Mesh tm = new Mesh();
-            if (!DA.GetData(0, ref tm) && !tm.IsValid) return;
-
+            if (!DA.GetData(0, ref tm) && !tm.IsValid)return;
             List<Mesh> o = new List<Mesh>(3);
-            if (!DA.GetDataList(1, o))return;
-
+            DA.GetDataList(1, o);
             List<Point3d> pl = new List<Point3d>();
             if (!DA.GetDataList(2, pl))return;
 
@@ -516,11 +483,20 @@ namespace Lt.Analysis
             IGH_Param igh_Param = Params.Output[1];//可见点
             IGH_PreviewObject igh_PreviewObject = (IGH_PreviewObject)igh_Param;
             if (igh_PreviewObject.Hidden || !igh_PreviewObject.IsPreviewCapable) return;//电池隐藏或不可预览时跳过
-            igh_PreviewObject.DrawViewportWires(args);//可见点
-            
-            List<Point3d> pp = Params.Output[0].VolatileData.get_Branch(0) as List<Point3d>;
-            int k =  ((GH_Structure<GH_Integer>) Params.Input[3].VolatileData).get_FirstItem(false).Value;
-            args.Display.DrawPoints(pp, CentralSettings.PreviewPointStyle, (int)(k * 0.8), Color.CornflowerBlue);
+            GH_Structure<GH_Integer> pk = (GH_Structure<GH_Integer>) Params.Input[3].VolatileData;
+            int k = (pk).get_FirstItem(false).Value;//获取精度
+            List<GH_Point> Pt = ((GH_Structure<GH_Point>)Params.Output[0].VolatileData).FlattenData();
+            List<GH_Point> Grid = ((GH_Structure<GH_Point>)Params.Output[1].VolatileData).FlattenData();
+            List<Point3d> Ptl=new List<Point3d>(Pt.Count);
+            foreach (GH_Point V in Pt)
+                Ptl.Add(V.Value);
+            List<Point3d> Gridl
+                = new List<Point3d>(Pt.Count);
+            foreach (GH_Point V in Grid)
+                Gridl.Add(V.Value);
+                args.Display.DrawPoints(Gridl, CentralSettings.PreviewPointStyle, (int)(k * 0.4), Attributes.GetTopLevel.Selected ? args.WireColour_Selected : Color.Aquamarine);
+            //igh_PreviewObject.DrawViewportWires(args);//可见点
+                args.Display.DrawPoints(Ptl, CentralSettings.PreviewPointStyle, k , Attributes.GetTopLevel.Selected ? args.WireColour_Selected : Color.Red);
             //观察点
             
         }
@@ -531,4 +507,58 @@ namespace Lt.Analysis
         public override Guid ComponentGuid => new Guid("f5b0968b-4de5-45a6-a82b-744f64787e85");
         public override GH_Exposure Exposure => GH_Exposure.quarternary;
     }/// 视线分析
+    public class LTCE : GH_Component
+    {
+        public LTCE() : base("等高线高程分析", "LTCE", "分析等高线的高程，并获得其可视化色彩", "Lt", "分析")
+        { }// Contour Line Elevation Analysis
+
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
+        {
+            pManager.AddCurveParameter("等高线", "C", "待分析的等高线，请自行确保输入的都是水平曲线", GH_ParamAccess.list);
+        }
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+        {
+            pManager.AddColourParameter("色彩", "C", "输入曲线高程的映射色彩", GH_ParamAccess.list);
+            pManager.AddIntervalParameter("范围", "R", "输入高程线的高程范围", GH_ParamAccess.item);
+        }
+        protected override void SolveInstance(IGH_DataAccess DA)
+        {
+            List<Curve> g=new List<Curve>(3);
+            if (!DA.GetDataList(0,g))return;
+            List<Color> c= new List<Color>(g.Count);
+            List<double> cd = new List<double>(g.Count);
+            Interval r=new Interval();
+            foreach (Curve ci in g)
+            {
+               double cz = ci.PointAtEnd.Z;
+               r.Grow(cz);
+               cd.Add(cz);
+            }
+
+            DA.SetData(1, r);
+            foreach (double d in cd)
+                c.Add(LTTG.gradient.ColourAt(r.NormalizedParameterAt(d)));
+            DA.SetDataList(0, c);
+        }
+        public override void DrawViewportWires(IGH_PreviewArgs args)
+        {
+            if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return;//跳过锁定或非线框模式
+            List<GH_Colour> colour = ((GH_Structure<GH_Colour>)Params.Output[0].VolatileData).FlattenData();
+            List<GH_Curve> curve = ((GH_Structure<GH_Curve>)Params.Input[0].VolatileData).FlattenData();
+            for (int i = 0; i < colour.Count; i++)
+            {
+                GH_Curve cu = curve[i];
+                bool set = Attributes.GetTopLevel.Selected;
+                if (cu.IsValid)
+                    args.Display.DrawCurve(cu.Value,set?args.WireColour_Selected: colour[i].Value);
+            }
+        }
+        public override void DrawViewportMeshes(IGH_PreviewArgs args)
+        {
+        }
+        protected override Bitmap Icon => LTResource.等高线高程分析;
+        public override Guid ComponentGuid => new Guid("b8ddf076-9287-450e-833f-597f81bac1a4");
+        public override GH_Exposure Exposure => GH_Exposure.secondary;
+    }///等高线高程分析
+
 }

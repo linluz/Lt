@@ -73,6 +73,26 @@ namespace Lt {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
+        internal static System.Drawing.Bitmap ltlogo16 {
+            get {
+                object obj = ResourceManager.GetObject("ltlogo16", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
+        internal static System.Drawing.Bitmap ltlogo24 {
+            get {
+                object obj = ResourceManager.GetObject("ltlogo24", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
         internal static System.Drawing.Bitmap 云线 {
             get {
                 object obj = ResourceManager.GetObject("云线", resourceCulture);
