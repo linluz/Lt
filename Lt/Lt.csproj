@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="LtComponent.cs" />
     <Compile Include="LtInfo.cs" />
+    <Compile Include="LtMajas.cs" />
     <Compile Include="LTResource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
