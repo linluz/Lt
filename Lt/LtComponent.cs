@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper;
 using Grasshopper.GUI;
+using Grasshopper.GUI.Base;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI.Gradient;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.DocObjects;
@@ -19,11 +22,8 @@ using Rhino.Geometry.Intersect;
 
 namespace Lt.Analysis
 {
-    //todo  四个网格+登高高程 添加渐变范围（右键选择设置渐变），
-    //todo 【等高线淹没分析】 右键选择设置 水上色 水下色， 烘焙按水上水下分组，
-    //todo  【视线分析】 右键设置 观察点色、可视点色，
-    //todo 【等高线高程】等高线色彩改等高线高程 输出每条线的高度，色彩数据存入字段（运算前清除）、渲染和烘焙改写
     //todo 电池名和简称修改统一
+    //todo 给渐变的电池 加色彩标尺
     /// <summary>
     /// 通用
     /// </summary>
@@ -37,19 +37,114 @@ namespace Lt.Analysis
         /// <param name="args">预览变量，默认输入 args</param>
         public static void Draw1Meshes(int a, IGH_Component component, IGH_PreviewArgs args)
         {
-            List<GH_Mesh> lmesh = ((GH_Structure<GH_Mesh>)component.Params.Output[a].VolatileData).FlattenData();
+            var lmesh = component.Params.Output[a].VolatileData.AllData(true).Select(t => ((GH_Mesh)t).Value).ToList();
             bool set = component.Attributes.GetTopLevel.Selected;
             GH_PreviewMeshArgs args2 = new GH_PreviewMeshArgs(args.Viewport, args.Display,
                 (set ? args.ShadeMaterial_Selected : args.ShadeMaterial), args.MeshingParameters);
             if (lmesh.Count == 0) return; ///避免网格不存在
-            Mesh mesh = lmesh[0].Value;
+            Mesh mesh = lmesh[0];
             if (mesh.VertexColors.Count > 0 && !set) //仅存在着色且未被选取时
                 args2.Pipeline.DrawMeshFalseColors(mesh);
             else
                 args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
         }
+        /// <summary>
+        /// 渐变项
+        /// </summary>
+        /// <param name="doco">要被添加至的电池</param>
+        /// <param name="menu">要被添加的菜单</param>
+        /// <param name="text">菜单项名</param>
+        /// <param name="gra">电池中存储渐变的字段</param>
+        public static ToolStripMenuItem Menu_Gradient(this GH_DocumentObject doco, ToolStripDropDown menu, string text, string tooltip, ref GH_Gradient gra)
+        {
+            ToolStripMenuItem gradient = GH_DocumentObject.Menu_AppendItem(menu, text);
+            gradient.ToolTipText = tooltip;
+            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
+                downMenu.ShowImageMargin = false;
+            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets;
+            for (int i = 0; i <= gradientPresets.Count - 1; i++)
+            {
+                LT_GradientMenuItem GraMenuItem = new LT_GradientMenuItem(doco, ref gra)
+                {
+                    Gradient = gradientPresets[i],
+                    Index = i
+                };
+                gradient.DropDownItems.Add(GraMenuItem);
+            }
+            return gradient;
+        }
 
+        public static GH_Gradient Gradient0 = new GH_Gradient(
+            new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
+            new[]
+            {
+                Color.FromArgb(45, 51, 87),
+                Color.FromArgb(75, 107, 169),
+                Color.FromArgb(173, 203, 249),
+                Color.FromArgb(254, 244, 84),
+                Color.FromArgb(234, 126, 0),
+                Color.FromArgb(237, 53, 17)
+            });
     }
+
+    public sealed class LT_GradientMenuItem : ToolStripMenuItem
+    {
+        /// <summary>
+        /// 添加渐变菜单项
+        /// </summary>
+        /// <param name="doco">被添加至的电池</param>
+        /// <param name="gra">电池中对应使用的渐变</param>
+        public LT_GradientMenuItem(GH_DocumentObject doco, ref GH_Gradient gra)
+        {
+            DocO = doco;
+            Gra = gra;
+            DisplayStyle = ToolStripItemDisplayStyle.None;
+            Text = "渐变预设";
+            Margin = new Padding(1);
+            Paint += LT_GradientMenuItem_Paint;
+            MouseDown += Menu_GradientPresetClicked;
+        }
+
+        public GH_Gradient Gradient { get; set; }
+        public int Index { get; set; }
+        private void LT_GradientMenuItem_Paint(object sender, PaintEventArgs e)
+        {
+            Rectangle contentRectangle = ContentRectangle;
+            contentRectangle.X += 3;
+            contentRectangle.Y++;
+            contentRectangle.Width -= 25;
+            contentRectangle.Height -= 3;
+            e.Graphics.FillRectangle(Brushes.White, contentRectangle);
+            if (Gradient != null)
+            {
+                Gradient.Render_Gradient(e.Graphics, contentRectangle);
+                Rectangle rectangle = contentRectangle;
+                rectangle.Width--;
+                rectangle.Height--;
+                Pen pen = new Pen(Color.FromArgb(80, Color.Black));
+                e.Graphics.DrawRectangle(pen, rectangle);
+                pen.Dispose();
+                rectangle.Offset(1, 1);
+                Pen pen2 = new Pen(Color.FromArgb(150, Color.White));
+                e.Graphics.DrawRectangle(pen2, rectangle);
+                pen2.Dispose();
+            }
+            e.Graphics.DrawRectangle(Pens.Black, contentRectangle);
+        }
+
+        private void Menu_GradientPresetClicked(object sender, MouseEventArgs e)
+        {
+            GH_GradientMenuItem gh_GradientMenuItem = (GH_GradientMenuItem)sender;
+            DocO.RecordUndoEvent("设置渐变");
+            Gra = gh_GradientMenuItem.Gradient;
+            DocO.ExpirePreview(true);
+
+        }
+
+        private GH_DocumentObject DocO;
+        private GH_Gradient Gra;
+    }
+
     /// <summary>
     /// 网格淹没分析
     /// Flooded Terrain
@@ -57,7 +152,8 @@ namespace Lt.Analysis
     // ReSharper disable once UnusedMember.Global
     public class LTMF : GH_Component
     {
-        public LTMF() : base("网格淹没分析", "LTMF", "分析被水淹没后的地形状态", "Lt", "分析") { }
+        public LTMF() : base("网格淹没分析", "LTMF", "分析被水淹没后的地形状态", "Lt", "分析")
+        { Gradient = Ty.Gradient0; }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
@@ -100,7 +196,7 @@ namespace Lt.Analysis
                 if (z > e0)
                 {
                     cm.Vertices.Add(p);
-                    cm.VertexColors.Add(LTMG.gradient.ColourAt(ie.NormalizedParameterAt(z)));
+                    cm.VertexColors.Add(Gradient.ColourAt(ie.NormalizedParameterAt(z)));
                 }
                 else
                 {
@@ -111,6 +207,8 @@ namespace Lt.Analysis
 
             DA.SetData(0, cm);
         }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变", "左低右高，要新增预设，请使用【渐变】电池的右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
@@ -120,7 +218,7 @@ namespace Lt.Analysis
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args) { }
-
+        private GH_Gradient Gradient;
         protected override Bitmap Icon => LTResource.山体淹没分析;
         public override Guid ComponentGuid => new Guid("84474303-59cb-4248-9015-c5a02098fd99");
     }
@@ -133,12 +231,9 @@ namespace Lt.Analysis
         public LTMD()
             : base("网格坡向分析", "LTMD", "山坡地形朝向分析,X轴向为东,Y轴向为北\r\n双击电池图标以切换着色模式", "Lt", "分析")
         {
-            Num1 = Math.Tan(Math.PI / 8);
-            Num2 = Math.Tan(Math.PI * 3 / 8);
-            Shade = false;
-            Message = "顶点着色";
+            Shade = true;
+            Message = "面着色";
         }
-
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddMeshParameter("网格", "M", "要进行坡向分析的山地地形网格", GH_ParamAccess.item);
@@ -216,6 +311,16 @@ namespace Lt.Analysis
             DA.SetData(0, cm);
         }
 
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => Menu_AppendItem(menu, "使用面着色", Event, null, true, Shade);
+
+        //debug
+        public void Event(object sender, EventArgs e)
+        {
+            Shade = !Shade;
+            ((ToolStripMenuItem)sender).Checked = Shade;
+        }
+
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || Hidden || !args.Display.SupportsShading)
@@ -262,9 +367,20 @@ namespace Lt.Analysis
             return true;
         }
 
-        private double Num1;
-        private double Num2;
-        public bool Shade;
+        private static readonly double Num1 = Math.Tan(Math.PI / 8);
+        private static readonly double Num2 = Math.Tan(Math.PI * 3 / 8);
+        private bool _shade;
+
+        internal bool Shade
+        {
+            get => _shade;
+            set
+            {
+                Message = value ? "面着色" : "顶点着色";
+                _shade = value;
+            }
+        }
+
         protected override Bitmap Icon => LTResource.山体坡向分析;
         public override Guid ComponentGuid => new Guid("3d3ee5a9-c86e-4007-97c6-eb33aa365e27");
     }
@@ -280,7 +396,6 @@ namespace Lt.Analysis
             if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTMD j)
             {
                 j.Shade = !j.Shade;
-                j.Message = j.Shade ? "面着色" : "顶点着色";
                 j.ExpireSolution(true);
             }
 
@@ -293,7 +408,8 @@ namespace Lt.Analysis
     /// </summary>
     public class LTMG : GH_Component
     {
-        public LTMG() : base("网格坡度分析", "LTMG", "山地地形坡度分析", "Lt", "分析") { }
+        public LTMG() : base("网格坡度分析", "LTMG", "山地地形坡度分析", "Lt", "分析")
+        { Gradient = Ty.Gradient0; }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
@@ -322,10 +438,12 @@ namespace Lt.Analysis
 
             Mesh cm = tm.DuplicateMesh();
             foreach (double a in ra)
-                cm.VertexColors.Add(gradient.ColourAt(ia.NormalizedParameterAt(a)));
+                cm.VertexColors.Add(Gradient.ColourAt(ia.NormalizedParameterAt(a)));
             DA.SetData(0, cm);
             DA.SetData(1, ia);
         }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变", "角度左小右大，要新增预设，请使用【渐变】电池的右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
@@ -335,20 +453,7 @@ namespace Lt.Analysis
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args) { }
-
-        public static GH_Gradient gradient = new GH_Gradient(
-            new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
-            new[]
-            {
-                Color.FromArgb(45, 51, 87),
-                Color.FromArgb(75, 107, 169),
-                Color.FromArgb(173, 203, 249),
-                Color.FromArgb(254, 244, 84),
-                Color.FromArgb(234, 126, 0),
-                Color.FromArgb(237, 53, 17)
-            }
-        );
-
+        private GH_Gradient Gradient;
         protected override Bitmap Icon => LTResource.山体坡度分析;
         public override Guid ComponentGuid => new Guid("6c33fb8b-9da6-4688-8a1b-d0363350d176");
     }
@@ -359,7 +464,8 @@ namespace Lt.Analysis
     // ReSharper disable once UnusedMember.Global
     public class LTME : GH_Component
     {
-        public LTME() : base("高程分析", "LTME", "山地地形高程分析", "Lt", "分析") { }
+        public LTME() : base("高程分析", "LTME", "山地地形高程分析", "Lt", "分析")
+        { Gradient = Ty.Gradient0; }
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddMeshParameter("网格", "M", "要进行坡度分析的山地地形网格", GH_ParamAccess.item);
@@ -380,12 +486,14 @@ namespace Lt.Analysis
             Interval ie = new Interval(b.Min.Z, b.Max.Z);
             Mesh cm = tm.DuplicateMesh();
             foreach (Point3f p in tm.Vertices)
-                cm.VertexColors.Add(LTMG.gradient.ColourAt(ie.NormalizedParameterAt(p.Z)));
+                cm.VertexColors.Add(Gradient.ColourAt(ie.NormalizedParameterAt(p.Z)));
             ie.T0 = Math.Round(ie.T0, 2);
             ie.T1 = Math.Round(ie.T1, 2);
             DA.SetData(0, cm);
             DA.SetData(1, ie);
         }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变", "左低右高，要新增预设，请使用【渐变】电池的右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
@@ -395,7 +503,7 @@ namespace Lt.Analysis
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args) { }
-
+        private GH_Gradient Gradient;
         protected override Bitmap Icon => LTResource.山体高程分析;
         public override Guid ComponentGuid => new Guid("1afc0549-5308-47ef-b91c-a2eade694250");
     }
@@ -404,6 +512,7 @@ namespace Lt.Analysis
     /// Terrain Grade
     /// </summary>
     // ReSharper disable once UnusedMember.Global
+    // bug 点与封包版本不一致
     public class LTVL : GH_Component
     {
         public LTVL() : base("视线分析", "LTVL", "分析在山地某处的可见范围,cpu线程数大于2时自动调用多核计算", "Lt", "分析") { }
@@ -416,7 +525,6 @@ namespace Lt.Analysis
             pManager.AddPointParameter("观察点", "P", "观察者所在的点位置（不一定在网格上），支持多点观察,仅支持单列数据", GH_ParamAccess.list);
             pManager.AddIntegerParameter("精度", "A", "分析精度，即分析点阵内的间距,仅支持单项数据", GH_ParamAccess.item);
         }
-
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddPointParameter("观察点", "O", "观察者视点位置（眼高1m5）", GH_ParamAccess.list);
@@ -524,33 +632,38 @@ namespace Lt.Analysis
             DA.SetDataList(0, pt);
             DA.SetDataList(1, grid);
         }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+        {
+            Menu_AppendColourPicker(Menu_AppendItem(menu, "观察点色彩").DropDown, ColorO, OChanged);
+            Menu_AppendColourPicker(Menu_AppendItem(menu, "可见点色彩").DropDown, ColorV, VChanged);
+        }
+        public void OChanged(GH_ColourPicker sender, GH_ColourPickerEventArgs e)
+            => ColorO = e.Colour;
+        public void VChanged(GH_ColourPicker sender, GH_ColourPickerEventArgs e)
+            => ColorV = e.Colour;
+
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Hidden || !IsPreviewCapable) return; //电池隐藏或不可预览时跳过
             GH_Structure<GH_Integer> pk = (GH_Structure<GH_Integer>)Params.Input[3].VolatileData;
             int k = (pk).get_FirstItem(false).Value; //获取精度
-            List<GH_Point> Pt = ((GH_Structure<GH_Point>)Params.Output[0].VolatileData).FlattenData();
-            List<GH_Point> Grid = ((GH_Structure<GH_Point>)Params.Output[1].VolatileData).FlattenData();
-            List<Point3d> Ptl = new List<Point3d>(Pt.Count);
-            foreach (GH_Point V in Pt)
-                Ptl.Add(V.Value);
-            List<Point3d> Gridl
-                = new List<Point3d>(Pt.Count);
-            foreach (GH_Point V in Grid)
-                Gridl.Add(V.Value);
-            args.Display.DrawPoints(Gridl, CentralSettings.PreviewPointStyle, (int)(k * 0.4),
-                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : Color.Aquamarine);
-            //igh_PreviewObject.DrawViewportWires(args);//可见点
-            args.Display.DrawPoints(Ptl, CentralSettings.PreviewPointStyle, k,
-                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : Color.Red);
+
             //观察点
+            var Pt = Params.Output[0].VolatileData.AllData(true).Select(t => ((GH_Point)t).Value);
+            args.Display.DrawPoints(Pt, CentralSettings.PreviewPointStyle, k,
+                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : ColorO);
+            //可见点
+            var Grid = Params.Output[1].VolatileData.AllData(true).Select(t => ((GH_Point)t).Value);
+            args.Display.DrawPoints(Grid, CentralSettings.PreviewPointStyle, (int)(k * 0.4),
+                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : ColorV);
 
         }
 
-        public override void DrawViewportMeshes(IGH_PreviewArgs args)
-        {
-        }
+        public override void DrawViewportMeshes(IGH_PreviewArgs args) { }
 
+
+        private static Color ColorO = Color.Red;
+        private static Color ColorV = Color.Aquamarine;
         protected override Bitmap Icon => LTResource.视线分析;
         public override Guid ComponentGuid => new Guid("f5b0968b-4de5-45a6-a82b-744f64787e85");
         public override GH_Exposure Exposure => GH_Exposure.quarternary;
@@ -560,9 +673,11 @@ namespace Lt.Analysis
     /// Contour Line Elevation Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
+    //todo 【等高线高程】等高线色彩改等高线高程 输出每条线的高度，色彩数据存入字段（运算前清除）、渲染和烘焙改写
     public class LTCE : GH_Component
     {
-        public LTCE() : base("等高线高程分析", "LTCE", "分析等高线的高程，并获得其可视化色彩。可直接烘焙出已着色曲线", "Lt", "分析") { }
+        public LTCE() : base("等高线高程分析", "LTCE", "分析等高线的高程，并获得其可视化色彩。可直接烘焙出已着色曲线", "Lt", "分析")
+        { Gradient = Ty.Gradient0; }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
@@ -582,30 +697,29 @@ namespace Lt.Analysis
             List<Color> c = new List<Color>(g.Count);
             List<double> cd = new List<double>(g.Count);
             Interval r = new Interval();
-            foreach (Curve ci in g)
+            foreach (var cz in g.Select(ci => ci.PointAtEnd.Z))
             {
-                double cz = ci.PointAtEnd.Z;
                 r.Grow(cz);
                 cd.Add(cz);
             }
 
             DA.SetData(1, r);
-            foreach (double d in cd)
-                c.Add(LTMG.gradient.ColourAt(r.NormalizedParameterAt(d)));
+            c.AddRange(cd.Select(d => Gradient.ColourAt(r.NormalizedParameterAt(d))));
             DA.SetDataList(0, c);
         }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变", "左低右高，要新增预设，请使用【渐变】电池的右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-            List<GH_Colour> colour = ((GH_Structure<GH_Colour>)Params.Output[0].VolatileData).FlattenData();
-            List<GH_Curve> curve = ((GH_Structure<GH_Curve>)Params.Input[0].VolatileData).FlattenData();
-            for (int i = 0; i < colour.Count; i++)
+            Color[] colour = Params.Output[0].VolatileData.AllData(true).Select(t => ((GH_Colour)t).Value).ToArray();
+            Curve[] curve = Params.Input[0].VolatileData.AllData(true).Select(t => ((GH_Curve)t).Value).ToArray();
+            for (int i = 0; i < colour.Length; i++)
             {
-                GH_Curve cu = curve[i];
-                bool set = Attributes.GetTopLevel.Selected;
+                Curve cu = curve[i];
                 if (cu.IsValid)
-                    args.Display.DrawCurve(cu.Value, set ? args.WireColour_Selected : colour[i].Value);
+                    args.Display.DrawCurve(cu, Attributes.GetTopLevel.Selected ? args.WireColour_Selected : colour[i]);
             }
         }
 
@@ -613,22 +727,22 @@ namespace Lt.Analysis
 
         public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
         {
-            List<GH_Colour> colour = ((GH_Structure<GH_Colour>)Params.Output[0].VolatileData).FlattenData();
-            List<GH_Curve> curve = ((GH_Structure<GH_Curve>)Params.Input[0].VolatileData).FlattenData();
-            for (var i = 0; i < curve.Count; i++)
+            var colour = Params.Output[0].VolatileData.AllData(true).Select(t => ((GH_Colour)t).Value).ToArray();
+            var curve = Params.Input[0].VolatileData.AllData(true).Select(t => ((GH_Curve)t)).ToArray();
+            for (var i = 0; i < curve.Length; i++)
             {
                 GH_Curve c = curve[i];
                 if (!c.IsValid)
                     continue;
                 ObjectAttributes oa = att.Duplicate();
                 oa.ColorSource = ObjectColorSource.ColorFromObject;
-                oa.ObjectColor = colour[i].Value;
+                oa.ObjectColor = colour[i];
                 Guid id = Guid.Empty;
                 c.BakeGeometry(doc, oa, ref id);
                 obj_ids.Add(id);
             }
         }
-
+        private GH_Gradient Gradient;
         protected override Bitmap Icon => LTResource.等高线高程分析;
         public override Guid ComponentGuid => new Guid("b8ddf076-9287-450e-833f-597f81bac1a4");
         public override GH_Exposure Exposure => GH_Exposure.secondary;
@@ -638,6 +752,7 @@ namespace Lt.Analysis
     /// Contour Flood Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
+    //todo 【等高线淹没分析】 右键选择设置 水上色 水下色， 烘焙按水上水下分组，
     public class LTCF : GH_Component
     {
         public LTCF() : base("等高线淹没分析", "LTCF", "通过等高线数据分析地形的淹没情况。可直接烘焙出已着色曲线", "Lt", "分析") { }
@@ -684,25 +799,25 @@ namespace Lt.Analysis
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {//todo 这些循环是怎么回事 判断一下输入端是否应该只输入一种颜色
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-            List<GH_Colour> cu = ((GH_Structure<GH_Colour>)Params.Input[3].VolatileData).FlattenData();
-            List<GH_Curve> lu = ((GH_Structure<GH_Curve>)Params.Output[0].VolatileData).FlattenData();
-            List<GH_Colour> cd = ((GH_Structure<GH_Colour>)Params.Input[4].VolatileData).FlattenData();
-            List<GH_Curve> ld = ((GH_Structure<GH_Curve>)Params.Output[1].VolatileData).FlattenData();
-            if (lu.Count != 0 && cu.Count != 0)
+            var cu = Params.Input[3].VolatileData.AllData(true).Select(t => ((GH_Colour)t).Value).ToArray();
+            var lu = Params.Output[0].VolatileData.AllData(true).Select(t => ((GH_Curve)t).Value).ToArray();
+            var cd = Params.Input[4].VolatileData.AllData(true).Select(t => ((GH_Colour)t).Value).ToArray();
+            var ld = Params.Output[1].VolatileData.AllData(true).Select(t => ((GH_Curve)t).Value).ToArray();
+            if (lu.Length != 0 && cu.Length != 0)
             {
-                foreach (GH_Curve l in lu)
+                foreach (Curve l in lu)
                 {
                     bool set = Attributes.GetTopLevel.Selected;
                     if (l.IsValid)
-                        args.Display.DrawCurve(l.Value, set ? args.WireColour_Selected : cu[0].Value);
+                        args.Display.DrawCurve(l, set ? args.WireColour_Selected : cu[0]);
                 }
             }
-            if (ld.Count == 0 || cd.Count == 0) return;
-            foreach (GH_Curve l in ld)
+            if (ld.Length == 0 || cd.Length == 0) return;
+            foreach (Curve l in ld)
             {
                 bool set = Attributes.GetTopLevel.Selected;
                 if (l.IsValid)
-                    args.Display.DrawCurve(l.Value, set ? args.WireColour_Selected : cd[0].Value);
+                    args.Display.DrawCurve(l, set ? args.WireColour_Selected : cd[0]);
             }
         }
         public override void DrawViewportMeshes(IGH_PreviewArgs args) { }
@@ -756,10 +871,14 @@ namespace Lt.Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
     //debug 和写
+    //bug 渐变颜色不对应， 角度范围 坡度范围都不对
+    //todo 右键设置渐变
+    //todo 右键设置渐变范围 最大值到最小值 或0-90度
+    //todo 坡度输出端的 数据 还没改  请检查
     public class LTSA : GH_Component
     {
-        public LTSA() : base("山路坡度分析", "LTSA", "分析山路坡度并赋予其对应色彩", "Lt", "分析")
-        { }
+        public LTSA() : base("山路坡度分析", "LTSA", "分析山路坡度并按角度赋予其对应色彩", "Lt", "分析")
+        { Gradient = Ty.Gradient0; }
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddCurveParameter("山路", "C", "要分析的山路中线（确保已投影在地形上）", GH_ParamAccess.item);
@@ -769,7 +888,7 @@ namespace Lt.Analysis
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddLineParameter("路线", "L", "重建后用于分析的直线路线", GH_ParamAccess.tree);
-            pManager.AddNumberParameter("角度", "A", "对应坡度的色彩", GH_ParamAccess.tree);
+            pManager.AddNumberParameter("坡度", "A", "对应直线段的坡度", GH_ParamAccess.tree);
             pManager.AddTextParameter("坡度范围", "Rs", "山路直线的坡度范围（既坡高/坡长）", GH_ParamAccess.item);
             pManager.AddIntervalParameter("角度范围", "Ra", "山路直线与水平面所呈角度的范围", GH_ParamAccess.item);
         }
@@ -807,7 +926,7 @@ namespace Lt.Analysis
                 double ai = Math.Acos(v.Z) * 180 / Math.PI;//计算角度
                 a.Add(new GH_Number(ai));
                 A1.Grow(ai);
-                C[iter].Add(LTMG.gradient.ColourAt(A0.NormalizedParameterAt(ai))); //计算并添加色彩
+                C[iter].Add(Gradient.ColourAt(A0.NormalizedParameterAt(ai))); //计算并添加色彩
             }
             DA.SetDataList(0, l);
             DA.SetDataList(1, a);
@@ -824,6 +943,10 @@ namespace Lt.Analysis
             o3.ClearData();
             o3.AddVolatileData(new GH_Path(0), 0, A1);
         }
+
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变", "左低右高，要新增预设，请使用【渐变】电池的右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
+
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
@@ -865,7 +988,8 @@ namespace Lt.Analysis
         protected List<List<Line>> L;
         protected List<List<Color>> C;
         protected Interval A0 = new Interval(0, 90);
-        protected Interval A1 = new Interval();
+        protected Interval A1;
+        private GH_Gradient Gradient;
         protected override Bitmap Icon => LTResource.山路坡度分析;
         public override Guid ComponentGuid => new Guid("525ba474-eb6b-43f9-a8c4-b9594f4b33cf");
         public override GH_Exposure Exposure => GH_Exposure.tertiary;
