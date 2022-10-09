@@ -4,21 +4,181 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using GH_IO.Serialization;
 using Grasshopper;
+using Grasshopper.GUI.Gradient;
+using Grasshopper.GUI;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
 // ReSharper disable UnusedMember.Global
 
-namespace Majas
+namespace Lt.Majas
 {
+    /// <summary>
+    /// 通用
+    /// </summary>
+    public static class Ty
+    {
+        /// <summary>
+        /// 绘制预览网格，（仅未被选中时显示伪色），用于重写DrawViewportMeshes内
+        /// </summary>
+        /// <param name="a">输出端索引</param>
+        /// <param name="component">电池本体，默认输入this</param>
+        /// <param name="args">预览变量，默认输入 args</param>
+        public static void Draw1Meshes(int a, IGH_Component component, IGH_PreviewArgs args)
+        {
+            var lmesh = component.Params.Output[a].VolatileData.AllData(true).Select(t => ((GH_Mesh)t).Value).ToList();
+            bool set = component.Attributes.GetTopLevel.Selected;
+            GH_PreviewMeshArgs args2 = new GH_PreviewMeshArgs(args.Viewport, args.Display,
+                (set ? args.ShadeMaterial_Selected : args.ShadeMaterial), args.MeshingParameters);
+            if (lmesh.Count == 0) return; ///避免网格不存在
+            Mesh mesh = lmesh[0];
+            if (mesh.VertexColors.Count > 0 && !set) //仅存在着色且未被选取时
+                args2.Pipeline.DrawMeshFalseColors(mesh);
+            else
+                args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
+        }
+        /// <summary>
+        /// 渐变项
+        /// </summary>
+        /// <param name="doco">要被添加至的电池</param>
+        /// <param name="menu">要被添加的菜单</param>
+        /// <param name="text">菜单项名</param>
+        /// <param name="gra">电池中存储渐变的字段</param>
+        public static ToolStripMenuItem Menu_Gradient(this GradientComponent doco, ToolStripDropDown menu, string text, string tooltip, ref GH_Gradient gra)
+        {
+            ToolStripMenuItem gradient = GH_DocumentObject.Menu_AppendItem(menu, text);
+            gradient.ToolTipText = tooltip;
+            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
+                downMenu.ShowImageMargin = false;
+            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets;
+            for (int i = 0; i <= gradientPresets.Count - 1; i++)
+            {
+                LT_GradientMenuItem GraMenuItem = new LT_GradientMenuItem(doco, gra)
+                {
+                    Gradient = gradientPresets[i],
+                    Index = i
+                };
+                gradient.DropDownItems.Add(GraMenuItem);
+            }
+            return gradient;
+        }
+        public static bool GetGradient(this GH_IReader reader, string item_name, ref GH_Gradient gra)
+        {
+            if (!(reader.FindChunk(item_name) is GH_IReader r)) return false;
+            gra.Read(r);
+            return true;
+        }
+        public static bool SetGradient(this GH_IWriter writer, string item_name, GH_Gradient gra)
+        {
+            GH_IWriter w = writer.CreateChunk(item_name);
+            return gra.Write(w);
+        }
 
+        public static GH_Gradient Gradient0 = new GH_Gradient(
+            new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
+            new[]
+            {
+                Color.FromArgb(45, 51, 87),
+                Color.FromArgb(75, 107, 169),
+                Color.FromArgb(173, 203, 249),
+                Color.FromArgb(254, 244, 84),
+                Color.FromArgb(234, 126, 0),
+                Color.FromArgb(237, 53, 17)
+            });
+    }
+
+    public abstract class AComponent : MComponent
+    {
+        protected AComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
+            base(name, nickname, description, "Lt", subCategory, id, exposure, icon)
+        {
+        }
+    }
+
+    public abstract class GradientComponent : AComponent
+    {
+        protected GradientComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
+            base(name, nickname, description, subCategory, id, exposure, icon)
+        {
+        }
+        public override bool Read(GH_IReader reader)
+        {
+            base.Read(reader);
+            return reader.GetGradient("渐变", ref Gradient);
+        }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变", "左小右大，\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
+        public override bool Write(GH_IWriter writer)
+        {
+            base.Write(writer);
+            return writer.SetGradient("渐变", Gradient);
+        }
+        internal void Menu_GradientPresetClicked(object sender, MouseEventArgs e)
+        {
+            GH_GradientMenuItem gh_GradientMenuItem = (GH_GradientMenuItem)sender;
+            RecordUndoEvent("设置渐变");
+            Gradient = gh_GradientMenuItem.Gradient;
+            ExpirePreview(true);
+
+        }
+
+        protected GH_Gradient Gradient;
+    }
+
+    public sealed class LT_GradientMenuItem : ToolStripMenuItem
+    {
+        /// <summary>
+        /// 添加渐变菜单项
+        /// </summary>
+        /// <param name="grac">被添加至的电池</param>
+        /// <param name="gra">电池中对应使用的渐变</param>
+        public LT_GradientMenuItem(GradientComponent grac, GH_Gradient gra)
+        {
+            Gradient = gra;
+            DisplayStyle = ToolStripItemDisplayStyle.None;
+            Text = "渐变预设";
+            Margin = new Padding(1);
+            Paint += LT_GradientMenuItem_Paint;
+            MouseDown += grac.Menu_GradientPresetClicked;
+        }
+
+        public GH_Gradient Gradient { get; set; }
+        public int Index { get; set; }
+        private void LT_GradientMenuItem_Paint(object sender, PaintEventArgs e)
+        {
+            Rectangle contentRectangle = ContentRectangle;
+            contentRectangle.X += 3;
+            contentRectangle.Y++;
+            contentRectangle.Width -= 25;
+            contentRectangle.Height -= 3;
+            e.Graphics.FillRectangle(Brushes.White, contentRectangle);
+            if (Gradient != null)
+            {
+                Gradient.Render_Gradient(e.Graphics, contentRectangle);
+                Rectangle rectangle = contentRectangle;
+                rectangle.Width--;
+                rectangle.Height--;
+                Pen pen = new Pen(Color.FromArgb(80, Color.Black));
+                e.Graphics.DrawRectangle(pen, rectangle);
+                pen.Dispose();
+                rectangle.Offset(1, 1);
+                Pen pen2 = new Pen(Color.FromArgb(150, Color.White));
+                e.Graphics.DrawRectangle(pen2, rectangle);
+                pen2.Dispose();
+            }
+            e.Graphics.DrawRectangle(Pens.Black, contentRectangle);
+        }
+    }
     public abstract class MComponent : GH_Component
     {
         protected MComponent(string name, string nickname, string description, string category, string subCategory,
@@ -77,7 +237,8 @@ namespace Majas
         /// <param name="max">上限</param>
         /// <param name="contain">true为可以等于上限</param>
         /// <returns>输出的报错信息</returns>
-        public static string Maxpd(double num, double max, bool contain) => contain ? (num > max ? $"不能大于上限{max}" : "") : (num >= max ? $"不能大于等于上限{max}" : "");
+        public static string Maxpd(double num, double max, bool contain)
+            => contain ? (num > max ? $"不能大于上限{max}" : "") : (num >= max ? $"不能大于等于上限{max}" : "");
         /// <summary>
         /// 判定数值是否超过下限
         /// </summary>
@@ -85,7 +246,8 @@ namespace Majas
         /// <param name="min">下限</param>
         /// <param name="contain">true为可以等于下限</param>
         /// <returns>输出的报错信息</returns>
-        public static string Minpd(double num, double min, bool contain) => contain ? (num < min ? $"不能大于上限{min}" : "") : (num <= min ? $"不能大于等于上限{min}" : "");
+        public static string Minpd(double num, double min, bool contain)
+            => contain ? (num < min ? $"不能大于上限{min}" : "") : (num <= min ? $"不能大于等于上限{min}" : "");
         /// <summary>
         /// 判定数值是否超过上限,,若失败则输出false并自动报错
         /// </summary>
@@ -734,7 +896,8 @@ namespace Majas
             var b = da.GetData(index, ref d);
             destination = d;
             return b;
-        } public static bool GetDataListM<T>(this IGH_DataAccess da, int index, out List<T> destination)
+        }
+        public static bool GetDataListM<T>(this IGH_DataAccess da, int index, out List<T> destination)
         {
             List<T> d = new List<T>();
             var b = da.GetDataList(index, d);
