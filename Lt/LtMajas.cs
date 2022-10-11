@@ -18,6 +18,8 @@ using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
+using Rhino.DocObjects;
+using Rhino;
 
 // ReSharper disable UnusedMember.Global
 
@@ -47,6 +49,25 @@ namespace Lt.Majas
             else
                 args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
         }
+        public static void BakeColorGroup<T>(this RhinoDoc doc, List<List<T>> l, Color co, string groupname, ObjectAttributes att, List<Guid> obj_ids)
+            where T : IGH_Goo, IGH_BakeAwareData
+        {
+            foreach (var l0 in l)
+            {
+                if (l0.Count == 0 || co.IsEmpty) return;
+                ObjectAttributes oa = att.Duplicate();
+                int groupIndex = doc.Groups.Add(groupname);
+                oa.AddToGroup(groupIndex);
+                oa.ColorSource = ObjectColorSource.ColorFromObject;
+                oa.ObjectColor = co;
+                foreach (T c in l0.Where(c => c.IsValid))
+                {
+                    c.BakeGeometry(doc, oa, out Guid id);
+                    obj_ids.Add(id);
+                }
+            }
+
+        }
         /// <summary>
         /// 渐变项
         /// </summary>
@@ -54,7 +75,7 @@ namespace Lt.Majas
         /// <param name="menu">要被添加的菜单</param>
         /// <param name="text">菜单项名</param>
         /// <param name="gra">电池中存储渐变的字段</param>
-        public static ToolStripMenuItem Menu_Gradient(this GradientComponent doco, ToolStripDropDown menu, string text, string tooltip, ref GH_Gradient gra)
+        public static ToolStripMenuItem Menu_Gradient(this GradientComponent doco, ToolStripDropDown menu, string text, string tooltip, GH_Gradient gra)
         {
             ToolStripMenuItem gradient = GH_DocumentObject.Menu_AppendItem(menu, text);
             gradient.ToolTipText = tooltip;
@@ -72,7 +93,7 @@ namespace Lt.Majas
             }
             return gradient;
         }
-        public static bool GetGradient(this GH_IReader reader, string item_name, ref GH_Gradient gra)
+        public static bool GetGradient(this GH_IReader reader, string item_name, GH_Gradient gra)
         {
             if (!(reader.FindChunk(item_name) is GH_IReader r)) return false;
             gra.Read(r);
@@ -114,15 +135,17 @@ namespace Lt.Majas
         public override bool Read(GH_IReader reader)
         {
             base.Read(reader);
-            return reader.GetGradient("渐变", ref Gradient);
+            return reader.GetGradient("渐变", Gradient);
         }
-        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-            => this.Menu_Gradient(menu, "渐变", "左小右大，\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】", ref Gradient);
         public override bool Write(GH_IWriter writer)
         {
             base.Write(writer);
             return writer.SetGradient("渐变", Gradient);
         }
+
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => this.Menu_Gradient(menu, "渐变",
+                "左小右大，若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】", Gradient);
         internal void Menu_GradientPresetClicked(object sender, MouseEventArgs e)
         {
             GH_GradientMenuItem gh_GradientMenuItem = (GH_GradientMenuItem)sender;
@@ -132,7 +155,19 @@ namespace Lt.Majas
 
         }
 
-        protected GH_Gradient Gradient;
+        private GH_Gradient _gradient;
+        protected GH_Gradient Gradient
+        {
+            get => _gradient;
+            set
+            {
+                _gradient = value;
+                GradientChange?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        public event GradientEventHandler GradientChange;
+
+        public delegate void GradientEventHandler(IGH_DocumentObject sender, EventArgs e);
     }
 
     public sealed class LT_GradientMenuItem : ToolStripMenuItem
