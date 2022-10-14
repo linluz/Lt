@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,7 +8,6 @@ using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper;
 using Grasshopper.GUI;
-using Grasshopper.GUI.Base;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
@@ -19,32 +19,47 @@ using Rhino.Geometry;
 using Rhino.Geometry.Intersect;
 using Lt.Majas;
 using System.Globalization;
+using Grasshopper.GUI.Gradient;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Menu;
 
 namespace Lt.Analysis
 {
     //after 电池名和简称修改统一
     //after 给渐变的电池 加色彩标尺
 
-
     /// <summary>
     /// 网格淹没分析
     /// Flooded Terrain
     /// </summary>
     // ReSharper disable once UnusedMember.Global
+    // bug 着色不一致
     public class LTMF : GradientComponent
     {
+        [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
         public LTMF() : base(
             "网格淹没分析", "LTMF",
             "分析被水淹没后的地形状态",
             "分析",
             "84474303-59cb-4248-9015-c5a02098fd99", 1, LTResource.山体淹没分析)
-        { Gradient = Ty.Gradient0; }
+        { Gradient = new GH_Gradient(
+            new[] { 0, 0.16, 0.33, 0.5,0.67, 0.84, 1},
+            new[]
+            {
+                Color.FromArgb(45, 51, 87),
+                Color.FromArgb(75, 107, 169),
+                Color.FromArgb(173, 203, 249),
+                Color.FromArgb(254, 244, 84),
+                Color.FromArgb(234, 126, 0),
+                Color.FromArgb(219, 37, 0),
+                Color.FromArgb(138, 36, 36)
+            }); }
 
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Mesh, "网格", "M", "要被淹没的山地地形网格");
             pm.AddIP(ParT.Number, "高度", "E", "淹没地形的水平面高度");
-            pm.AddIP(ParT.Colour, "色彩", "C", "被水淹没区域的色彩", def: Color.FromArgb(52, 58, 107));
+            pm.AddIP(ParT.Boolean, "摊平", "F", "是否要将水下等高线摊平到水平面，默认为false", def: true);
 
             pm.AddOP(ParT.Mesh, "网格", "M", "被水淹没后的地形网格");
         }
@@ -59,52 +74,63 @@ namespace Lt.Analysis
             double e0 = 0;
             if (!DA.GetData(1, ref e0))
                 return;
-            Color c0 = new Color();
-            if (!DA.GetData(2, ref c0))
+            bool f = false;
+            if (!DA.GetData(2, ref f))
                 return;
-
             #endregion
-
-            if (t0.Normals.Count == 0) //网格法向
-                t0.Normals.ComputeNormals();
-            Mesh cm = new Mesh();
-            foreach (MeshFace f in t0.Faces)
-                cm.Faces.AddFace(f); //把面加入新网格
+            
             BoundingBox b = t0.GetBoundingBox(false);
             Interval ie = new Interval(b.Min.Z, b.Max.Z); //获取高度范围
-            foreach (Point3f p in t0.Vertices)
+            t0.VertexColors.Clear();
+            for (var i = 0; i < t0.Vertices.Count; i++)
             {
+                Point3f p = t0.Vertices[i];
                 double z = p.Z;
-                if (z > e0)
-                {
-                    cm.Vertices.Add(p);
-                    cm.VertexColors.Add(Gradient.ColourAt(ie.NormalizedParameterAt(z)));
-                }
-                else
-                {
-                    cm.Vertices.Add(new Point3f(p.X, p.Y, Convert.ToSingle(e0)));
-                    cm.VertexColors.Add(c0);
-                }
-            } //判定修正后把点和色彩加入新网格
+                var hb = z > e0;
+                t0.Vertices[i] = !f||hb ? p : new Point3f(p.X, p.Y, Convert.ToSingle(e0));
+                t0.VertexColors.Add(hb ? Gradient.ColourAt(ie.NormalizedParameterAt(z)) : DownColor.Value);
+            }
 
-            DA.SetData(0, cm);
+            DA.SetData(0, t0);
         }
+
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => Menu_Color(menu, "淹没色彩", DownColor);
+        
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || Hidden || !args.Display.SupportsShading)
                 return; ///跳过非着色模式和，或参数不支持预览
             Ty.Draw1Meshes(0, this, args);
         }
+        public override bool Read(GH_IReader reader)
+        {
+            DownColor.Value = reader.GetDrawingColor("colordown");
+            return base.Read(reader);
+        }
+        public override bool Write(GH_IWriter writer)
+        {
+            writer.SetDrawingColor("colordown", DownColor.Value);
+            return base.Write(writer);
+        }
+        /// <summary>
+        /// 水下色彩
+        /// </summary>
+        private GH_Colour DownColor = new GH_Colour(Color.FromArgb(52, 58, 107));
     }
     /// <summary>
     /// 网格坡向分析
     /// Slope Direction Analysis
     /// </summary>
+    // todo 标明 用户对象版 依赖网格炸开
     public class LTMD : AComponent
     {
         public LTMD()
             : base("网格坡向分析", "LTMD",
-                "山坡地形朝向分析,X轴向为东,Y轴向为北\r\n双击电池图标以切换着色模式",
+                "山坡地形朝向分析,X轴向为东,Y轴向为北" +
+                "\r\n双击电池图标以切换着色模式," +
+                "\r\n注意：顶点着色会焊接网格顶点，可能导致顶点减少，" +
+                "\r\n面着色会把面的每个顶点都解离出来，可能会导致顶点增加",
                 "分析",
                 "3d3ee5a9-c86e-4007-97c6-eb33aa365e27", 1, LTResource.山体坡向分析)
         {
@@ -115,7 +141,7 @@ namespace Lt.Analysis
             pm.AddIP(ParT.Mesh, "网格", "M", "要进行坡向分析的山地地形网格");
             pm.AddIP(ParT.Colour, "色彩", "C",
                 "各向的色彩，请按上、北、东北、东、东南、南、西南、西、西北的顺序连入9个色彩", ParamTrait.List,
-                new List<Color>
+                new[]
                 {
                     Color.FromArgb(219, 219, 219),
                     Color.FromArgb(232, 77, 77),
@@ -150,42 +176,59 @@ namespace Lt.Analysis
             }
 
             #endregion
-
-            Mesh cm = new Mesh();
             if (Shade)
             {
+                //数量不对时计算面法向
                 if (t0.FaceNormals.Count != t0.Faces.Count)
                     t0.FaceNormals.ComputeFaceNormals();
-                int numi = 0;
-                int[] fi = { 0, 0, 0, 0 };
-                for (var i = 0; i < t0.Faces.Count; i++)
+                //计算色彩
+                var cl = t0.FaceNormals.Select(t => c[DShade(t)]).ToArray();
+                //获取顶点列表
+                Point3f[] vl = t0.Vertices.ToArray();
+                var fl = t0.Faces.ToArray();
+                var nl = t0.FaceNormals.ToArray();
+                //清理顶点及顶点色彩列表
+                t0.VertexColors.Clear();
+                t0.Vertices.Clear();
+                t0.Faces.Clear();
+                t0.Normals.Clear();
+                for (var i = 0; i < fl.Length; i++)
                 {
-                    MeshFace f = t0.Faces[i];
-                    Color c1 = c[DShade(t0.FaceNormals[i])];
-                    for (int j = 0; j < (f.IsTriangle ? 3 : 4); j++)
+                    var tri = fl[i].IsTriangle;
+                    for (int j = 0; j <  3 ; j++)
                     {
-                        fi[j] = numi;
-                        cm.Vertices.Add(t0.Vertices[f[j]]);
-                        cm.VertexColors.Add(c1);
-                        numi++;
-                    } //添加顶点和顶点色
+                        //添加顶点,并修改对应面索引
+                        fl[i][j] = t0.Vertices.Add(vl[fl[i][j]]);
+                        //添加色彩
+                        t0.VertexColors.Add(cl[i]);
+                        //添加法向
+                        t0.Normals.Add(nl[i]);
+                    }
 
-                    cm.Faces.AddFace(f.IsTriangle
-                        ? new MeshFace(fi[0], fi[1], fi[2])
-                        : new MeshFace(fi[0], fi[1], fi[2], fi[3]));
+                    if (tri)
+                        fl[i][3] = fl[i][2];
+                    else
+                    {
+                        fl[i][3] = t0.Vertices.Add(vl[fl[i][3]]);
+                        t0.VertexColors.Add(cl[i]);
+                        t0.Normals.Add(nl[i]);
+                    }
                 }
+                t0.Faces.AddFaces(fl);
             }
             else
             {
-                cm = t0.DuplicateMesh();
-                foreach (Vector3f v in t0.Normals)
-                    cm.VertexColors.Add(c[DShade(v)]);
+                t0.VertexColors.Clear();//清理旧色彩
+                t0.Weld(DocumentAngleTolerance());//焊接顶点
+                t0.Normals.ComputeNormals();//计算顶点法向
+                //根据顶点法向计算色彩并添加
+                foreach (Vector3f t in t0.Normals)
+                    t0.VertexColors.Add(c[DShade(t)]);
             }
 
-            DA.SetData(0, cm);
+            DA.SetData(0, t0);
         }
-
-        //debug
+        
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
             => Menu_AppendItem(menu, "使用面着色",
                 delegate (object sender, EventArgs e)
@@ -273,6 +316,7 @@ namespace Lt.Analysis
     /// 网格坡度分析
     /// Terrain Mesh Grade Analysis
     /// </summary>
+    // bug 角度有问题
     // ReSharper disable once UnusedMember.Global
     public class LTMG : GradientComponent
     {
@@ -286,27 +330,23 @@ namespace Lt.Analysis
             pm.AddIP(ParT.Mesh, "网格", "M", "要进行坡度分析的山地地形网格");
 
             pm.AddOP(ParT.Mesh, "网格", "M", "已按角度着色的地形网格");
-            //debug 此处带验证 数据会不会被转换
-            pm.AddOP(ParT.Angle, "角度", "A", "坡度范围（度）", ParamTrait.Item | ParamTrait.IsAngle);
+            pm.AddOP(ParT.Interval, "角度", "A", "坡度范围（度）");
         }
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             Mesh tm = new Mesh();
             if (!DA.GetData(0, ref tm))
                 return;
-            List<double> ra = new List<double>(3);
-            Interval ia = Interval.Unset;
-            foreach (Vector3f v in tm.Normals)
-            {
-                double a = Math.Acos(v.Z) * 180 / Math.PI;
-                ia.Grow(a);
-                ra.Add(a);
-            }
+            tm.Normals.ComputeNormals();//计算法向
+            tm.VertexColors.Clear();//清除色彩
+            var ra = tm.Normals.Select(t => Math.Round(Math.Acos(t.Z) * 57.29,2)).ToArray();//法向转角度,保留两位小数
+            
+            //获取区间
+            Interval ia = ra.ToInterval();
 
-            Mesh cm = tm.DuplicateMesh();
-            foreach (double a in ra)
-                cm.VertexColors.Add(Gradient.ColourAt(ia.NormalizedParameterAt(a)));
-            DA.SetData(0, cm);
+            //角度转换为色彩并给予网格
+            tm.VertexColors.AppendColors(ra.Select(t => Gradient.ColourAt(ia.NormalizedParameterAt(t))).ToArray());
+            DA.SetData(0, tm);
             DA.SetData(1, ia);
         }
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
@@ -381,9 +421,15 @@ namespace Lt.Analysis
             pm.AddOP(ParT.Point, "观察点", "O", "观察者视点位置（眼高1m5）", ParamTrait.List);
             pm.AddOP(ParT.Point, "可见点", "V", "被看见的点", ParamTrait.List);
         }
-
+        
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (DA.Iteration == 0)
+            {
+                Pt.Clear();
+                Grid.Clear();
+            }
+
             if (DA.Iteration > 1)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "超出数据已被忽视");
@@ -445,7 +491,7 @@ namespace Lt.Analysis
                     return;
                 }
 
-                p.Z += EyeHight; //增加眼高
+                p.Z += EyeHight.Value; //增加眼高
                 pt.Add(p);
             } //采样点
 
@@ -458,20 +504,16 @@ namespace Lt.Analysis
 
             foreach (Point3d p in pt)
                 if (Environment.ProcessorCount > 2)
-                {
                     Parallel.For(0, grid.Count, j => //多线程处理每个采样点  
                     {
                         if (!grib[j]) //grib为否(尚未可见)时 判定当前是否为可见点，与网格上的点阵交点仅为1的即可见点
                             grib[j] = Intersection.MeshLine(tm, new Line(p, grid[j]), out _).Length == 1;
                     });
-                }
                 else
                 {
                     for (int j = 0; j < grid.Count; j++)
-                    {
                         if (!grib[j]) //grib为否(尚未可见)时 判定当前是否为可见点，与网格上的点阵交点仅为1的即可见点
                             grib[j] = Intersection.MeshLine(tm, new Line(p, grid[j]), out _).Length == 1;
-                    }
                 }
 
             for (int i = grid.Count - 1; i >= 0; i--) //剔除不可见点
@@ -485,30 +527,22 @@ namespace Lt.Analysis
         }
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
-            Menu_AppendColourPicker(Menu_AppendItem(menu, "观察点色彩").DropDown, ColorO,
-                (sender, e) => ColorO = e.Colour);
-            Menu_AppendColourPicker(Menu_AppendItem(menu, "可见点色彩").DropDown, ColorV,
-                (sender, e) => ColorV = e.Colour);
-            Menu_AppendItem(menu, "眼高");
-            Menu_AppendTextItem(menu, EyeHight.ToString(CultureInfo.InvariantCulture), null,
-                (sender, text) =>
-                {
-                    //debug 检查此处是否会有问题
-                    if (double.TryParse(text, out EyeHight)) return;
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "输入的不是数值，请检查");
-                }, false);
+            Menu_Color(menu, "观察点色彩", ColorO);
+            Menu_Color(menu, "可见点色彩", ColorV);
+            Menu_Double(menu, "眼高", EyeHight, "人眼高度");
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Hidden || !IsPreviewCapable) return; //电池隐藏或不可预览时跳过
             GH_Structure<GH_Integer> pk = (GH_Structure<GH_Integer>)Params.Input[3].VolatileData;
-            int k = (pk).get_FirstItem(false).Value; //获取精度
+            if (pk.DataCount == 0) return;
+            int k = pk.get_FirstItem(false).Value; //获取精度
 
             args.Display.DrawPoints(Pt, CentralSettings.PreviewPointStyle, k,
-                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : ColorO);
+                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : ColorO.Value);
             args.Display.DrawPoints(Grid, CentralSettings.PreviewPointStyle, (int)(k * 0.4),
-                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : ColorV);
+                Attributes.GetTopLevel.Selected ? args.WireColour_Selected : ColorV.Value);
 
         }
 
@@ -524,12 +558,12 @@ namespace Lt.Analysis
         /// <summary>
         /// 观察点色彩
         /// </summary>
-        private static Color ColorO = Color.Red;
+        private static GH_Colour ColorO = new GH_Colour(Color.Red);
         /// <summary>
         /// 可见点色彩
         /// </summary>
-        private static Color ColorV = Color.Aquamarine;
-        private static double EyeHight = 1.5;
+        private static GH_Colour ColorV = new GH_Colour(Color.Aquamarine);
+        private static GH_Number EyeHight = new GH_Number(1.5);
     }
     /// <summary>
     /// 等高线高程分析
@@ -553,15 +587,16 @@ namespace Lt.Analysis
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (DA.Iteration == 0)
+            {
+                Col.Clear();
+                Cur.Clear();
+            }
+
             List<GH_Curve> g = new List<GH_Curve>(3);
             if (!DA.GetDataList(0, g)) return;
-            List<double> cd = new List<double>(g.Count);
-            Interval r = Interval.Unset;
-            foreach (var cz in g.Select(ci => ci.Value.PointAtEnd.Z))
-            {
-                r.Grow(cz);
-                cd.Add(cz);
-            }
+            var cd = g.Select(ci => ci.Value.PointAtEnd.Z).ToArray();
+            Interval r = cd.ToInterval();
 
             DA.SetData(1, r);
             //cd的值转相对于r的标准参数，再获取对应位置色彩
@@ -618,11 +653,17 @@ namespace Lt.Analysis
             pm.AddIP(ParT.Integer, "高程", "E", "水面的高程");
             pm.AddIP(ParT.Boolean, "摊平", "F", "是否要将水下等高线摊平到水平面，默认为false", def: false);
 
-            pm.AddOP(ParT.Curve, "水上线", "Cu", "未淹没区的等高线", ParamTrait.List);
-            pm.AddOP(ParT.Curve, "水下线", "Cd", "被淹没区的等高线", ParamTrait.List);
+            pm.AddOP(ParT.Curve, "未淹线", "Cu", "未淹没区域的等高线", ParamTrait.List);
+            pm.AddOP(ParT.Curve, "淹没线", "Cd", "被淹没区域的等高线", ParamTrait.List);
         }
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (DA.Iteration == 0)
+            {
+                Cu.Clear();
+                Cd.Clear();
+            }
+
             if (DA.Iteration > 1)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "本电池仅运算一次，更多数据已被忽略");
@@ -652,47 +693,60 @@ namespace Lt.Analysis
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
-            Menu_AppendColourPicker(Menu_AppendItem(menu, "水上色彩").DropDown, ColorUp,
-                (sender, e) => ColorUp = e.Colour);
-            Menu_AppendColourPicker(Menu_AppendItem(menu, "水下色彩").DropDown, ColorDown,
-                (sender, e) => ColorDown = e.Colour);
+            Menu_Color(menu, "未淹色彩", UpColor);
+            Menu_Color(menu, "淹没色彩", DownColor);
         }
+
+        public override bool Read(GH_IReader reader)
+        {
+            UpColor.Value = reader.GetDrawingColor("colorup");
+            DownColor.Value = reader.GetDrawingColor("colordown");
+            return base.Read(reader);
+        }
+
+        public override bool Write(GH_IWriter writer)
+        {
+            writer.SetDrawingColor("colorup", UpColor.Value);
+            writer.SetDrawingColor("colordown", DownColor.Value);
+            return base.Write(writer);
+        }
+
         /// <summary>
         /// 水上色彩
         /// </summary>
-        private Color ColorUp = Color.White;
+        private GH_Colour UpColor = new GH_Colour(Color.White);
         /// <summary>
         /// 水下色彩
         /// </summary>
-        private Color ColorDown = Color.FromArgb(59, 104, 156);
+        private GH_Colour DownColor = new GH_Colour(Color.FromArgb(59, 104, 156));
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-            if (!ColorUp.IsEmpty)
+            if (!UpColor.Value.IsEmpty)
             {
                 foreach (var l0 in Cu)
                     foreach (var l1 in l0)
                     {
                         bool set = Attributes.GetTopLevel.Selected;
                         if (l1.IsValid)
-                            args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : ColorUp);
+                            args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : UpColor.Value);
                     }
             }
-            if (ColorDown.IsEmpty) return;
+            if (DownColor.Value.IsEmpty) return;
             foreach (var l0 in Cd)
                 foreach (var l1 in l0)
                 {
                     bool set = Attributes.GetTopLevel.Selected;
                     if (l1.IsValid)
-                        args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : ColorDown);
+                        args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : DownColor.Value);
                 }
         }
         //debug 检测多组烘焙后是否达到预期 是否因为多组同名报错
         public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
         {
-            doc.BakeColorGroup(Cu, ColorUp, "UpWater", att, obj_ids);
-            doc.BakeColorGroup(Cd, ColorDown, "DownWater", att, obj_ids);
+            doc.BakeColorGroup(Cu, UpColor.Value, "UpWater", att, obj_ids);
+            doc.BakeColorGroup(Cd, DownColor.Value, "DownWater", att, obj_ids);
         }
 
         private List<List<GH_Curve>> Cu = new List<List<GH_Curve>>(5);
@@ -716,7 +770,7 @@ namespace Lt.Analysis
         {
             Gradient = Ty.Gradient0;
             GI = false;
-            //渐变更改 怎改色彩
+            //渐变更改 
             GradientChange += (sender, args) => ColorChange = true;
         }
 
@@ -733,6 +787,13 @@ namespace Lt.Analysis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 输入输出变量初始化
+
+            if (DA.Iteration == 0)
+            {
+                A.Clear();
+                L.Clear();
+            }
+
             Curve c = null;
             if (!DA.GetData(0, ref c) || c == null) return;
             int e = 0;
@@ -782,13 +843,14 @@ namespace Lt.Analysis
                     ((ToolStripMenuItem)sender).Checked = GI;
                 }
                 , null, true, GI);
-            m.ToolTipText = "默认不启用，此时渐变色彩范围对应0-90º。\r\n启用时，范围对应实际的角度范围";
+            m.ToolTipText = "默认不启用，此时渐变色彩范围对应0-90º。" +
+                            "\r\n启用时，范围对应实际的角度范围";
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-            if (L == null || L.Count == 0) return;
+            if (L.Count == 0) return;
             for (int i = 0; i < L.Count; i++)
                 for (int j = 0; j < L[i].Count; j++)
                     args.Display.DrawLine(L[i][j].Value, Attributes.GetTopLevel.Selected ? args.WireColour_Selected : C[i][j]);
