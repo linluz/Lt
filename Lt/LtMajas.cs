@@ -20,6 +20,7 @@ using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino;
+using System.Reflection;
 
 // ReSharper disable UnusedMember.Global
 
@@ -39,15 +40,15 @@ namespace Lt.Majas
         public static void Draw1Meshes(int a, IGH_Component component, IGH_PreviewArgs args)
         {
             var lmesh = component.Params.Output[a].VolatileData.AllData(true).Select(t => ((GH_Mesh)t).Value).ToList();
+            if (lmesh.Count == 0) return; ///避免网格不存在
             bool set = component.Attributes.GetTopLevel.Selected;
             GH_PreviewMeshArgs args2 = new GH_PreviewMeshArgs(args.Viewport, args.Display,
-                (set ? args.ShadeMaterial_Selected : args.ShadeMaterial), args.MeshingParameters);
-            if (lmesh.Count == 0) return; ///避免网格不存在
-            Mesh mesh = lmesh[0];
-            if (mesh.VertexColors.Count > 0 && !set) //仅存在着色且未被选取时
-                args2.Pipeline.DrawMeshFalseColors(mesh);
-            else
-                args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
+                set ? args.ShadeMaterial_Selected : args.ShadeMaterial, args.MeshingParameters);
+            foreach (Mesh mesh in lmesh)
+                if (mesh.VertexColors.Count > 0)
+                    args2.Pipeline.DrawMeshFalseColors(mesh);
+                else
+                    args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
         }
         public static void BakeColorGroup<T>(this RhinoDoc doc, List<List<T>> l, Color co, string groupname, ObjectAttributes att, List<Guid> obj_ids)
             where T : IGH_Goo, IGH_BakeAwareData
@@ -67,42 +68,6 @@ namespace Lt.Majas
                 }
             }
 
-        }
-        /// <summary>
-        /// 渐变项
-        /// </summary>
-        /// <param name="doco">要被添加至的电池</param>
-        /// <param name="menu">要被添加的菜单</param>
-        /// <param name="text">菜单项名</param>
-        /// <param name="gra">电池中存储渐变的字段</param>
-        public static ToolStripMenuItem Menu_Gradient(this GradientComponent doco, ToolStripDropDown menu, string text, string tooltip, GH_Gradient gra)
-        {
-            ToolStripMenuItem gradient = GH_DocumentObject.Menu_AppendItem(menu, text);
-            gradient.ToolTipText = tooltip;
-            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
-                downMenu.ShowImageMargin = false;
-            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets;
-            for (int i = 0; i <= gradientPresets.Count - 1; i++)
-            {
-                LT_GradientMenuItem GraMenuItem = new LT_GradientMenuItem(doco, gra)
-                {
-                    Gradient = gradientPresets[i],
-                    Index = i
-                };
-                gradient.DropDownItems.Add(GraMenuItem);
-            }
-            return gradient;
-        }
-        public static bool GetGradient(this GH_IReader reader, string item_name, GH_Gradient gra)
-        {
-            if (!(reader.FindChunk(item_name) is GH_IReader r)) return false;
-            gra.Read(r);
-            return true;
-        }
-        public static bool SetGradient(this GH_IWriter writer, string item_name, GH_Gradient gra)
-        {
-            GH_IWriter w = writer.CreateChunk(item_name);
-            return gra.Write(w);
         }
 
         public static GH_Gradient Gradient0 = new GH_Gradient(
@@ -144,8 +109,35 @@ namespace Lt.Majas
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-            => this.Menu_Gradient(menu, "渐变",
-                "左小右大，若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】", Gradient);
+            => Menu_Gradient(menu, "渐变", Gradient,
+                "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】");
+        /// <summary>
+        /// 渐变项
+        /// </summary>
+        /// <param name="doco">要被添加至的电池</param>
+        /// <param name="menu">要被添加的菜单</param>
+        /// <param name="text">菜单项名</param>
+        /// <param name="gra">电池中存储渐变的字段</param>
+        public ToolStripMenuItem Menu_Gradient(ToolStripDropDown menu, string text, GH_Gradient gra, string tooltip = null)
+        {
+            ToolStripMenuItem gradient = Menu_AppendItem(menu, text);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                gradient.ToolTipText = tooltip;
+            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
+                downMenu.ShowImageMargin = false;
+            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets;
+            for (int i = 0; i <= gradientPresets.Count - 1; i++)
+            {
+                MGradientMenuItem GraMenuItem = new MGradientMenuItem(this, gra)
+                {
+                    Gradient = gradientPresets[i],
+                    Index = i
+                };
+                gradient.DropDownItems.Add(GraMenuItem);
+            }
+            return gradient;
+        }
+
         internal void Menu_GradientPresetClicked(object sender, MouseEventArgs e)
         {
             GH_GradientMenuItem gh_GradientMenuItem = (GH_GradientMenuItem)sender;
@@ -168,16 +160,16 @@ namespace Lt.Majas
         public event GradientEventHandler GradientChange;
 
         public delegate void GradientEventHandler(IGH_DocumentObject sender, EventArgs e);
-    }
+     }
 
-    public sealed class LT_GradientMenuItem : ToolStripMenuItem
+    public sealed class MGradientMenuItem : ToolStripMenuItem
     {
         /// <summary>
         /// 添加渐变菜单项
         /// </summary>
         /// <param name="grac">被添加至的电池</param>
         /// <param name="gra">电池中对应使用的渐变</param>
-        public LT_GradientMenuItem(GradientComponent grac, GH_Gradient gra)
+        public MGradientMenuItem(GradientComponent grac, GH_Gradient gra)
         {
             Gradient = gra;
             DisplayStyle = ToolStripItemDisplayStyle.None;
@@ -477,6 +469,39 @@ namespace Lt.Majas
         protected virtual void Menu_案例Clicked(object sender, EventArgs e) =>
             Instances.DocumentEditor.ScriptAccess_OpenDocument(
                 $@"{Folders.AppDataFolder}Example\{Name}-{NickName}.gh");
+        #region MenuItem
+        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null)
+        {
+            ToolStripMenuItem dou = Menu_AppendItem(menu, text);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                dou.ToolTipText = tooltip;
+            Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture), null,
+                (sender, s) =>
+                {
+                    if (double.TryParse(s, out double d))
+                    {
+                        def.Value = d;
+                        ExpireSolution(false);
+                    }
+                    else
+                        MessageBox.Show("输入的不是数值，请检查");
+                }, false);
+            return dou;
+        }
+        public ToolStripMenuItem Menu_Color(ToolStripDropDown menu, string text, GH_Colour def, string tooltip = null)
+        {
+            ToolStripMenuItem col = Menu_AppendItem(menu, text);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                col.ToolTipText = tooltip;
+            Menu_AppendColourPicker(col.DropDown, def.Value,
+                (sender, e) =>
+                {
+                    def.Value = e.Colour;
+                    ExpirePreview(true);
+                });
+            return col;
+        }
+        #endregion
         public sealed override bool Locked
         {
             get => base.Locked;
@@ -563,14 +588,40 @@ namespace Lt.Majas
                 param.NickName = string.IsNullOrEmpty(nickName) ? name[0].ToString().ToUpper() : nickName;
                 param.Description = description ?? "";
             }
-
+            /// <summary>
+            /// 添加输入端
+            /// </summary>
+            /// <param name="type">参数端类型</param>
+            /// <param name="name">名称</param>
+            /// <param name="nickname">简称</param>
+            /// <param name="description">定义</param>
+            /// <param name="trait">参数端状态</param>
+            /// <param name="def">默认多个值的话必须使用[]而非List<>，否则会识别不了</param>
+            /// <returns>输出设置好的参数端</returns>
             public int AddIP(ParT type, string name, string nickname, string description
                 , ParamTrait trait = ParamTrait.Item, params object[] def)
                 => AddP(false, type, name, nickname, description, trait, def);
+            /// <summary>
+            /// 添加输入端
+            /// </summary>
+            /// <param name="ip">要设置并添加的参数端</param>
+            /// <param name="name">名称</param>
+            /// <param name="nickname">简称</param>
+            /// <param name="description">定义</param>
+            /// <param name="trait">参数端状态</param>
+            /// <returns>输出设置好的参数端</returns>
             public int AddIP(IGH_Param ip, string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item)
                 => AddP(false, ip, name, nickname, description, trait);
-
+            /// <summary>
+            /// 添加输入端
+            /// </summary>
+            /// <typeparam name="T">参数端的类型</typeparam>
+            /// <param name="name">名称</param>
+            /// <param name="nickname">简称</param>
+            /// <param name="description">定义</param>
+            /// <param name="trait">参数端状态</param>
+            /// <returns>输出设置好的参数端</returns>
             public T AddIP<T>(string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item) where T : IGH_Param, new()
            => AddP(false, new T(), name, nickname, description, trait);
@@ -628,7 +679,7 @@ namespace Lt.Majas
                 if (t.HasFlag(ParamTrait.Tree))
                     return GH_ParamAccess.tree;
                 throw new ArgumentOutOfRangeException(nameof(t),
-                    $"{nameof(ParamTrait)}必须含有输入数据结构标志，同{nameof(GH_ParamAccess)}");
+                    $"{nameof(ParamTrait)}必须含有输入数据结构标志，以便其设定{nameof(GH_ParamAccess)}");
             }
 
             private static GH_DataMapping Trait2DataMap(ParamTrait t)
@@ -648,77 +699,77 @@ namespace Lt.Majas
                     switch (type)
                     {
                         case ParT.Angle:
-                            Param_Number ip = SetGHP<Param_Number, double>(ParamCategory.PeGo, def);
+                            Param_Number ip = SetGHP<Param_Number>(def);
                             ip.AngleParameter = true;
                             return ip;
                         case ParT.Arc:
-                            return SetGHP<Param_Arc, Arc>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Arc>(def);
                         case ParT.Boolean:
-                            return SetGHP<Param_Boolean, bool>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Boolean>(def);
                         case ParT.Box:
-                            return SetGHP<Param_Box, Box>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Box>(def);
                         case ParT.Brep:
-                            return SetGHP<Param_Brep, Brep>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Brep>(def);
                         case ParT.Circle:
-                            return SetGHP<Param_Circle, Circle>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Circle>(def);
                         case ParT.Colour:
-                            return SetGHP<Param_Colour, Color>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Colour>(def);
                         case ParT.ComplexNumber:
-                            return SetGHP<Param_Complex, Complex>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Complex>(def);
                         case ParT.Culture:
-                            return SetGHP<Param_Culture, CultureInfo>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Culture>(def);
                         case ParT.Curve:
-                            return SetGHP<Param_Curve, Curve>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Curve>(def);
                         case ParT.Field:
-                            return SetGHP<Param_Field, GH_Field>(ParamCategory.PaIG, def);
+                            return SetGHP<Param_Field>(def);
                         case ParT.GenericObject:
-                            return SetGHP<Param_GenericObject, IGH_Goo>(ParamCategory.PeIO, def);
+                            return SetGHP<Param_GenericObject>(def);
                         case ParT.Geometry:
-                            return SetGHP<Param_Geometry, IGH_GeometricGoo>(ParamCategory.PeIG, def);
+                            return SetGHP<Param_Geometry>(def);
                         case ParT.Group:
-                            return SetGHP<Param_Group, GH_GeometryGroup>(ParamCategory.PaIG, def);
+                            return SetGHP<Param_Group>(def);
                         case ParT.Integer:
-                            return SetGHP<Param_Integer, int>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Integer>(def);
                         case ParT.Interval2D:
-                            return SetGHP<Param_Interval2D, UVInterval>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Interval2D>(def);
                         case ParT.Interval:
-                            return SetGHP<Param_Interval, Interval>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Interval>(def);
                         case ParT.Line:
-                            return SetGHP<Param_Line, Line>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Line>(def);
                         case ParT.Matrix:
-                            return SetGHP<Param_Matrix, Matrix>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Matrix>(def);
                         case ParT.MeshFace:
-                            return SetGHP<Param_MeshFace, MeshFace>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_MeshFace>(def);
                         case ParT.Mesh:
-                            return SetGHP<Param_Mesh, Mesh>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Mesh>(def);
                         case ParT.Number:
-                            return SetGHP<Param_Number, double>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Number>(def);
                         case ParT.Path:
-                            return SetGHP<Param_StructurePath, GH_Path>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_StructurePath>(def);
                         case ParT.Plane:
-                            return SetGHP<Param_Plane, Plane>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Plane>(def);
                         case ParT.Point:
-                            return SetGHP<Param_Point, Point3d>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Point>(def);
                         case ParT.Rectangle:
-                            return SetGHP<Param_Rectangle, Rectangle3d>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Rectangle>(def);
                         case ParT.ScriptVariable:
-                            return SetGHP<Param_ScriptVariable, IGH_Goo>(ParamCategory.PeIO, def);
+                            return SetGHP<Param_ScriptVariable>(def);
                         case ParT.SubD:
 #if R7
-                            return SetGHP<Param_SubD, SubD>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_SubD>(def);
 #else
                             throw new ArgumentOutOfRangeException(nameof(type), "ParT.SubD仅在rhino7可用");
 #endif
                         case ParT.Surface:
-                            return SetGHP<Param_Surface, Surface>(ParamCategory.PeGe, def);
+                            return SetGHP<Param_Surface>(def);
                         case ParT.Text:
-                            return SetGHP<Param_String, string>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_String>(def);
                         case ParT.Time:
-                            return SetGHP<Param_Time, DateTime>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Time>(def);
                         case ParT.Transform:
-                            return SetGHP<Param_Transform, Transform>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Transform>(def);
                         case ParT.Vector:
-                            return SetGHP<Param_Vector, Vector3d>(ParamCategory.PeGo, def);
+                            return SetGHP<Param_Vector>(def);
                         default:
                             throw new ArgumentOutOfRangeException(nameof(type), type, null);
                     }
@@ -729,123 +780,25 @@ namespace Lt.Majas
                 }
             }
 
-
-            [Flags]
-            private enum ParamCategory
-            {
-                Param,
-                Persistent,
-                IGoo,
-                Goo,
-                IGeometricGoo,
-                GeometricGoo,
-                PaIG = Param & IGoo,
-                PeGe = Persistent & GeometricGoo,
-                PeGo = Persistent & Goo,
-                PeIO = Persistent & IGoo,
-                PeIG = Persistent & IGeometricGoo
-            }
             /// <summary>
             /// 生成类型为Q的参数端，并将默认值设置给其 待 debug
             /// </summary>
             /// <typeparam name="Q">输出的参数端具体类型</typeparam>
-            /// <typeparam name="T">参数端默认数据的类型</typeparam>
-            /// <param name="t">参数端类型枚举，手工设置t，若使用反射从Q上推导也行，但会太慢</param>
-            /// <param name="def">默认数据，无则输入null</param>
-            /// <returns>类型为Q的参数端</returns>
-            /// <exception cref="ArgDefException">Q为非持久时，def必须为null</exception>
-            /// <exception cref="ArgumentException">def中数据的类型不是T是报错</exception>
-            private static Q SetGHP<Q, T>(ParamCategory t, params object[] def) where Q : IGH_Param, new()
+            /// <param name="def">默认数据，无则不输入,若其类型不被参数端所接受则会添加等量的默认类型的默认实例</param>
+            /// <returns></returns>
+            /// <exception cref="ArgumentException">Q非GH_PersistentParam，def却有值</exception>
+            private static Q SetGHP<Q>(params object[] def) where Q : IGH_Param, new()
             {
                 Q ip = new Q();
                 //无默认直接输出
-                if (def == null)
+                if (def.Length == 0)
                     return ip;
-                //非保持 却有默认就报错
-                if (!t.HasFlag(ParamCategory.Persistent))
-                    throw new ArgDefException();
-
-                if (t.HasFlag(ParamCategory.IGoo))
-                {
-                    if (ip is GH_PersistentParam<IGH_Goo> gg && def is IEnumerable<IGH_Goo> d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-                if (t.HasFlag(ParamCategory.Goo))
-                {
-                    if (ip is GH_PersistentParam<GH_Goo<T>> gg && def is T[] d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-                if (t.HasFlag(ParamCategory.IGeometricGoo))
-                {
-                    if (ip is GH_PersistentParam<IGH_GeometricGoo> gg && def is IEnumerable<IGH_GeometricGoo> d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-                if (t.HasFlag(ParamCategory.GeometricGoo))
-                {
-                    if (ip is GH_PersistentParam<GH_GeometricGoo<T>> gg && def is T[] d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-
+                MethodInfo Method = ip.GetType().GetMethod("SetPersistentData", new[] { typeof(object[]) });
+                if (Method == null)
+                    throw new ArgumentException(
+                        $"{nameof(Q)}不具有【SetPersistentData(params object[])】方法，\r\n可能不派生自【GH_PersistentParam<T>】,\r\n请不要给此参数端设置默认值");
+                Method.Invoke(ip, new object[] { def });
                 return ip;
-            ArgErr:
-                throw new ArgumentException($"【AddIParameter】中参数{nameof(def)}中项的类型必须{typeof(T)}，请检查");
-            }
-            /// <summary>
-            /// 生成类型为Q的参数端，并将默认值设置给其 待 
-            /// </summary>
-            /// <typeparam name="Q">输出的参数端具体类型</typeparam>
-            /// <typeparam name="T">参数端默认数据的类型</typeparam>
-            /// <param name="def">默认数据，无则输入null</param>
-            /// <returns>类型为Q的参数端</returns>
-            /// <exception cref="ArgDefException">Q为非持久时，def必须为null</exception>
-            /// <exception cref="ArgumentException">def中数据的类型不是T是报错</exception>
-            private static Q SetGHP<Q, T>(IEnumerable<object> def) where Q : IGH_Param, new()
-            {
-                Q ip = new Q();
-                //无默认直接输出
-                if (def == null)
-                    return ip;
-
-                Type bt = ip.Type.BaseType;
-                //非保持 却有默认就报错
-                Debug.Assert(bt != null, nameof(bt) + " != null");
-                if (!bt.ToString().Contains("GH_PersistentParam") || !bt.ToString().Contains("GH_ExpressionParam"))
-                    throw new ArgDefException();
-                var bbt = bt.GenericTypeArguments[0].BaseType?.ToString();
-                Debug.Assert(bbt != null, nameof(bbt) + " != null");
-                if (bbt.Contains("GH_Goo"))
-                {
-                    if (ip is GH_PersistentParam<GH_Goo<T>> gg && def is IEnumerable<T> d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-                if (bbt.Contains("IGH_GeometricGoo"))
-                {
-                    if (ip is GH_PersistentParam<IGH_GeometricGoo> gg && def is IEnumerable<IGH_GeometricGoo> d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-                if (bbt.Contains("GH_GeometricGoo"))
-                {
-                    if (ip is GH_PersistentParam<GH_GeometricGoo<T>> gg && def is IEnumerable<T> d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-
-                if (bbt.Contains("IGH_Goo"))
-                {
-                    if (ip is GH_PersistentParam<IGH_Goo> gg && def is IEnumerable<IGH_Goo> d)
-                        gg.SetPersistentData(d);
-                    else goto ArgErr;
-                }
-
-                return ip;
-            ArgErr:
-                throw new ArgumentException($"【AddIParameter】中参数{nameof(def)}中项的类型必须{typeof(T)}，请检查");
             }
             public int IParamCount => this[false].Count;
             public int OParamCount => this[true].Count;
@@ -872,23 +825,21 @@ namespace Lt.Majas
         [Flags]
         public enum ParamTrait
         {
-            Item = 0,//同 GH_ParamAccess，三项只能有一项，否则只执行数值小的项
-            List = 1 << 0,
-            Tree = 1 << 1,
+            Item = 1<<0,//同 GH_ParamAccess，三项只能有一项，否则只执行数值小的项
+            List = 1 << 1,
+            Tree = 1 << 2,
             //todo 需要实现
-            OnlyOne = 1 << 2,//配合上面可致 仅接受第一个分支/（的第一项）数据
-            Hidden = 1 << 3,//隐藏此参数端的预览
-            Optional = 1 << 4,//此参数端为可选，此时勿输入不会被报错
-            //NamedList = 1 << 5,//此参数端有已命名项，仅当【整数】参数端时有效
-            IsAngle = 1 << 6,//此参数端为角度参数端，仅当其为【数值】参数端时有效
-            Simplify = 1 << 7,//简化参数路径
-            Reverse = 1 << 8,//反转数据数序
-            Flatten = 1 << 9,//摊平，不能与下同时存在，否则只执行摊平
-            Graft = 1 << 10//升枝，不能与上同时存在
+            OnlyOne = 1 << 3,//配合上面可致 仅接受第一个分支/（的第一项）数据
+            Hidden = 1 << 4,//隐藏此参数端的预览
+            Optional = 1 << 5,//此参数端为可选，此时勿输入不会被报错
+            //NamedList = 1 << 6,//此参数端有已命名项，仅当【整数】参数端时有效
+            IsAngle = 1 << 7,//此参数端为角度参数端，仅当其为【数值】参数端时有效
+            Simplify = 1 << 8,//简化参数路径
+            Reverse = 1 << 9,//反转数据数序
+            Flatten = 1 << 10,//摊平，不能与下同时存在，否则只执行摊平
+            Graft = 1 << 11//升枝，不能与上同时存在
         }
-
 #endif
-
     }
 
     [Serializable]
@@ -924,7 +875,6 @@ namespace Lt.Majas
             a.Description += s.ToString();
             return a;
         }
-
         public static bool GetDataM<T>(this IGH_DataAccess da, int index, out T destination)
         {
             T d = default;
@@ -939,5 +889,32 @@ namespace Lt.Majas
             destination = d;
             return b;
         }
+        public static Interval ToInterval(this IEnumerable<double> l)
+        {
+            using (IEnumerator<double> e = l.GetEnumerator())
+            {
+                var i0 = e.Current;
+                var i1 = e.MoveNext() ? e.Current : i0;
+                Interval r = new Interval(i0, i1);
+                if (r.IsDecreasing) r.Swap();
+                while (e.MoveNext())
+                    r.Grow(e.Current);
+                return r;
+            }
+        }
+
+        #region Gradient
+        public static bool GetGradient(this GH_IReader reader, string item_name, GH_Gradient gra)
+        {
+            if (!(reader.FindChunk(item_name) is GH_IReader r)) return false;
+            gra.Read(r);
+            return true;
+        }
+        public static bool SetGradient(this GH_IWriter writer, string item_name, GH_Gradient gra)
+        {
+            GH_IWriter w = writer.CreateChunk(item_name);
+            return gra.Write(w);
+        }
+        #endregion
     }
 }
