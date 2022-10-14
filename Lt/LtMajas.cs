@@ -240,8 +240,6 @@ namespace Lt.Majas
         }
 
 #endif
-
-
         /// <summary>
         /// ±¨´í£¡
         /// </summary>
@@ -893,6 +891,8 @@ namespace Lt.Majas
         {
             using (IEnumerator<double> e = l.GetEnumerator())
             {
+                if(!e.MoveNext())
+                    return Interval.Unset;
                 var i0 = e.Current;
                 var i1 = e.MoveNext() ? e.Current : i0;
                 Interval r = new Interval(i0, i1);
