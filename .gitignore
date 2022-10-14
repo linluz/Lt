@@ -260,3 +260,4 @@ paket-files/
 __pycache__/
 *.pyc
 /Examples/terrain annalyse.3dmbak
+/Examples/terrain annalyse.3dm.rhl
