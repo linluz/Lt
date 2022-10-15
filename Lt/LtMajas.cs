@@ -1,7 +1,6 @@
 #define gaixie
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
@@ -10,7 +9,6 @@ using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper;
 using Grasshopper.GUI.Gradient;
-using Grasshopper.GUI;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Data;
@@ -93,15 +91,18 @@ namespace Lt.Majas
 
     public abstract class GradientComponent : AComponent
     {
-        protected GradientComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
+        protected GradientComponent(string name, string nickname, string description, string subCategory, string id,
+            int exposure = 1, Bitmap icon = null) :
             base(name, nickname, description, subCategory, id, exposure, icon)
         {
         }
+
         public override bool Read(GH_IReader reader)
         {
             base.Read(reader);
             return reader.GetGradient("渐变", Gradient);
         }
+
         public override bool Write(GH_IWriter writer)
         {
             base.Write(writer);
@@ -110,57 +111,12 @@ namespace Lt.Majas
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
             => Menu_Gradient(menu, "渐变", Gradient,
-                "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】");
-        /// <summary>
-        /// 渐变项
-        /// </summary>
-        /// <param name="doco">要被添加至的电池</param>
-        /// <param name="menu">要被添加的菜单</param>
-        /// <param name="text">菜单项名</param>
-        /// <param name="gra">电池中存储渐变的字段</param>
-        public ToolStripMenuItem Menu_Gradient(ToolStripDropDown menu, string text, GH_Gradient gra, string tooltip = null)
-        {
-            ToolStripMenuItem gradient = Menu_AppendItem(menu, text);
-            if (!string.IsNullOrWhiteSpace(tooltip))
-                gradient.ToolTipText = tooltip;
-            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
-                downMenu.ShowImageMargin = false;
-            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets;
-            for (int i = 0; i <= gradientPresets.Count - 1; i++)
-            {
-                MGradientMenuItem GraMenuItem = new MGradientMenuItem(this, gra)
-                {
-                    Gradient = gradientPresets[i],
-                    Index = i
-                };
-                gradient.DropDownItems.Add(GraMenuItem);
-            }
-            return gradient;
-        }
+                "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】",
+                ReCom);
 
-        internal void Menu_GradientPresetClicked(object sender, MouseEventArgs e)
-        {
-            GH_GradientMenuItem gh_GradientMenuItem = (GH_GradientMenuItem)sender;
-            RecordUndoEvent("设置渐变");
-            Gradient = gh_GradientMenuItem.Gradient;
-            ExpirePreview(true);
-
-        }
-
-        private GH_Gradient _gradient;
-        protected GH_Gradient Gradient
-        {
-            get => _gradient;
-            set
-            {
-                _gradient = value;
-                GradientChange?.Invoke(this, EventArgs.Empty);
-            }
-        }
-        public event GradientEventHandler GradientChange;
-
-        public delegate void GradientEventHandler(IGH_DocumentObject sender, EventArgs e);
-     }
+        protected bool ReCom = false;
+        protected GH_Gradient Gradient;
+    }
 
     public sealed class MGradientMenuItem : ToolStripMenuItem
     {
@@ -169,14 +125,15 @@ namespace Lt.Majas
         /// </summary>
         /// <param name="grac">被添加至的电池</param>
         /// <param name="gra">电池中对应使用的渐变</param>
-        public MGradientMenuItem(GradientComponent grac, GH_Gradient gra)
+        public MGradientMenuItem( GH_Gradient gra, MouseEventHandler even)
         {
             Gradient = gra;
             DisplayStyle = ToolStripItemDisplayStyle.None;
             Text = "渐变预设";
             Margin = new Padding(1);
             Paint += LT_GradientMenuItem_Paint;
-            MouseDown += grac.Menu_GradientPresetClicked;
+            if(even!=null)
+                MouseDown += even;
         }
 
         public GH_Gradient Gradient { get; set; }
@@ -468,7 +425,48 @@ namespace Lt.Majas
             Instances.DocumentEditor.ScriptAccess_OpenDocument(
                 $@"{Folders.AppDataFolder}Example\{Name}-{NickName}.gh");
         #region MenuItem
-        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null)
+        /// <summary>
+        /// 绘制设置整数菜单项
+        /// </summary>
+        /// <param name="menu">所在菜单</param>
+        /// <param name="text">文本</param>
+        /// <param name="def">预设值及要被修改的值</param>
+        /// <param name="tooltip">提示</param>
+        /// <param name="recom">重计算？否则仅过期预览</param>
+        /// <returns>设置好的菜单项</returns>
+        public ToolStripMenuItem Menu_Integer(ToolStripDropDown menu, string text, GH_Integer def, string tooltip = null, bool recom = false)
+        {
+            ToolStripMenuItem dou = Menu_AppendItem(menu, text);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                dou.ToolTipText = tooltip;
+            Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture), null,
+                (sender, s) =>
+                {
+                    if (int.TryParse(s, out int d))
+                    {
+                        RecordUndoEvent($"设置{text}");
+                        def.Value = d;
+                        if (recom)
+
+                            ExpireSolution(false);
+                        else
+                            ExpirePreview(false);
+                    }
+                    else
+                        MessageBox.Show("输入的不是整数，请检查");
+                }, false);
+            return dou;
+        }
+        /// <summary>
+        /// 绘制设置数值菜单项
+        /// </summary>
+        /// <param name="menu">所在菜单</param>
+        /// <param name="text">文本</param>
+        /// <param name="def">预设值及要被修改的值</param>
+        /// <param name="tooltip">提示</param>
+        /// <param name="recom">重计算？否则仅过期预览</param>
+        /// <returns>设置好的菜单项</returns>
+        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null,bool recom=false)
         {
             ToolStripMenuItem dou = Menu_AppendItem(menu, text);
             if (!string.IsNullOrWhiteSpace(tooltip))
@@ -478,15 +476,29 @@ namespace Lt.Majas
                 {
                     if (double.TryParse(s, out double d))
                     {
+                        RecordUndoEvent($"设置{text}");
                         def.Value = d;
-                        ExpireSolution(false);
+                        if (recom)
+
+                            ExpireSolution(false);
+                        else
+                            ExpirePreview(false);
                     }
                     else
                         MessageBox.Show("输入的不是数值，请检查");
                 }, false);
             return dou;
         }
-        public ToolStripMenuItem Menu_Color(ToolStripDropDown menu, string text, GH_Colour def, string tooltip = null)
+        /// <summary>
+        /// 绘制设置整数菜单项
+        /// </summary>
+        /// <param name="menu">所在菜单</param>
+        /// <param name="text">文本</param>
+        /// <param name="def">预设值及要被修改的值</param>
+        /// <param name="tooltip">提示</param>
+        /// <param name="recom">重计算？否则仅过期预览</param>
+        /// <returns>设置好的菜单项</returns>
+        public ToolStripMenuItem Menu_Color(ToolStripDropDown menu, string text, GH_Colour def, string tooltip = null, bool recom = false)
         {
             ToolStripMenuItem col = Menu_AppendItem(menu, text);
             if (!string.IsNullOrWhiteSpace(tooltip))
@@ -494,12 +506,58 @@ namespace Lt.Majas
             Menu_AppendColourPicker(col.DropDown, def.Value,
                 (sender, e) =>
                 {
+                    RecordUndoEvent($"设置{text}");
                     def.Value = e.Colour;
-                    ExpirePreview(true);
+                    if (recom)
+
+                        ExpireSolution(false);
+                    else
+                        ExpirePreview(false);
                 });
             return col;
         }
-        #endregion
+       /// <summary>
+        /// 绘制设置渐变菜单项
+        /// </summary>
+        /// <param name="menu">所在菜单</param>
+        /// <param name="text">文本</param>
+        /// <param name="def">预设值及要被修改的值</param>
+        /// <param name="tooltip">提示</param>
+        /// <param name="recom">重计算？否则仅过期预览</param>
+        /// <returns>设置好的菜单项</returns>
+        public ToolStripMenuItem Menu_Gradient(ToolStripDropDown menu, string text, GH_Gradient def, string tooltip = null, bool recom = false)
+        {
+            ToolStripMenuItem gradient = Menu_AppendItem(menu, text);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                gradient.ToolTipText = tooltip;
+            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
+                downMenu.ShowImageMargin = false;
+
+            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets.ToArray().ToList();
+            //把默认值插入为第一个
+            gradientPresets.Insert(0, def);
+            void GradientPresetClicked(object s, MouseEventArgs e)
+            {
+                MGradientMenuItem GradientMenuItem = (MGradientMenuItem)s;
+                RecordUndoEvent($"设置{text}");
+                def = GradientMenuItem.Gradient;
+                if (recom)
+                    ExpireSolution(false);
+                else
+                    ExpirePreview(false);
+            }
+
+            for (int i = 0; i <= gradientPresets.Count - 1; i++)
+            {
+                MGradientMenuItem GraMenuItem = new MGradientMenuItem(gradientPresets[i], GradientPresetClicked)
+                {
+                    Index = i
+                };
+                gradient.DropDownItems.Add(GraMenuItem);
+            }
+            return gradient;
+        }
+       #endregion
         public sealed override bool Locked
         {
             get => base.Locked;
