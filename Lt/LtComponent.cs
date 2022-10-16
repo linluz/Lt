@@ -10,7 +10,6 @@ using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
-using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.DocObjects;
@@ -30,7 +29,6 @@ namespace Lt.Analysis
     /// Flooded Terrain
     /// </summary>
     // ReSharper disable once UnusedMember.Global
-    // bug 着色不一致
     public class LTMF : GradientComponent
     {
         [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
@@ -94,7 +92,7 @@ namespace Lt.Analysis
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-            => Menu_Color(menu, "淹没色彩", DownColor,recom:true);
+            => Menu_Color(menu, "淹没色彩", DownColor, recom: true);
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
@@ -338,7 +336,7 @@ namespace Lt.Analysis
             Mesh tm = new Mesh();
             if (!DA.GetData(0, ref tm))
                 return;
-            if(tm.Normals.Count!=tm.Vertices.Count)
+            if (tm.Normals.Count != tm.Vertices.Count)
                 tm.Normals.ComputeNormals();//计算法向
             tm.VertexColors.Clear();//清除色彩
             var ra = tm.Normals.Select(t => Math.Round(Math.Acos(t.Z) * 57.29, 2)).ToArray();//法向转角度,保留两位小数
@@ -560,7 +558,7 @@ namespace Lt.Analysis
             foreach (Mesh t in Pt.Select(t
                          => Mesh.CreateFromSphere(new Sphere(t, SizeO.Value), 60, 30)))
                 MeshO.Append(t);
-            if (MeshO.VertexColors.Count==0||MeshO.VertexColors[0] != ColorO.Value)
+            if (MeshO.VertexColors.Count == 0 || MeshO.VertexColors[0] != ColorO.Value)
                 MeshO.VertexColors.CreateMonotoneMesh(ColorO.Value);
             args.Display.DrawMeshFalseColors(MeshO);
 
@@ -593,7 +591,7 @@ namespace Lt.Analysis
         /// <summary>
         /// 可见点色彩
         /// </summary>
-        private static GH_Colour ColorV = new GH_Colour(Color.FromArgb(0,207,182));
+        private static GH_Colour ColorV = new GH_Colour(Color.FromArgb(0, 207, 182));
         private static GH_Number SizeV = new GH_Number(4);
 
         private static GH_Number EyeHight = new GH_Number(1.5);
@@ -793,8 +791,6 @@ namespace Lt.Analysis
     /// Contour Flood Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
-    //debug 和写
-    //bug 颜色对 计算结果不对 计算过慢,预览函数也有bug
     public class LTSA : GradientComponent
     {
         public LTSA() : base("山路坡度分析", "LTSA",
@@ -803,12 +799,12 @@ namespace Lt.Analysis
             "525ba474-eb6b-43f9-a8c4-b9594f4b33cf", 3, LTResource.山路坡度分析)
         {
             Gradient = Ty.Gradient0;
-            GI = false;
+            ReCom = GI = true;
         }
-
+        //todo 用户对象版 坡度范围输出端 输出错误 ，分子分母错位
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Curve, "山路", "C", "要分析的山路中线（确保已投影在地形上）");
+            pm.AddIP(ParT.Curve, "山路", "C", "要分析的山路中线（确保已投影在地形上）", ParamTrait.List);
             pm.AddIP(ParT.Integer, "精度", "E", "山路中线的细分重建密度(单位米)");
 
             pm.AddOP(ParT.Line, "路线", "L", "重建后用于分析的直线路线", ParamTrait.List);
@@ -822,46 +818,49 @@ namespace Lt.Analysis
 
             if (DA.Iteration == 0)
             {
-                A.Clear();
                 L.Clear();
+                C.Clear();
             }
 
-            Curve c = null;
-            if (!DA.GetData(0, ref c) || c == null) return;
+            List<Curve> cl = new List<Curve>(0);
+            if (!DA.GetDataList(0, cl) || cl.Count == 0) return;
             int e = 0;
             if (!DA.GetData(1, ref e)) return;
             #endregion
-            int count = (int)Math.Ceiling(c.GetLength() / e);
-            Point3d[] p = c.DivideEquidistant(c.GetLength() / count);
-            int pc = p.Length - 1;//段数
-            List<GH_Line> l = new List<GH_Line>(pc);
-            var a = new List<double>(pc);
-            A.Add(a);
-            L.Add(l);
-            for (int i = 0; i < pc; i++)
-            {
-                Line li = new Line(p[i], p[i + 1]);
-                l.Add(new GH_Line(li));
-                Vector3d v = p[i + 1] - p[i];
-                double ai = Math.Acos(v.Z) * 180 / Math.PI;//计算角度
-                a.Add(ai);
-                A1.Grow(ai);
-            }
 
-            DA.SetDataList(0, l);
+            Line[][] la = cl.Select(t =>
+                new Polyline(t.DivideByCount(
+                           // (int)Math.Ceiling(t.GetLength() / e), false//获取细分数
+                           (int)Math.Round(t.GetLength() / e), true
+                        )//获取细分点t值
+                        .Select(t.PointAt)//t值转成点
+                ).GetSegments()//将点转成多段线后，再提取全部线段
+            ).ToArray();
+
+            List<Line> ll = new List<Line>(0);
+            //全部的线段都摊平到一个列表里
+            foreach (var t in la)
+                ll.AddRange(t);
+
+            L.Add(ll.Select(t => new GH_Line(t)).ToList());
+            var v = ll.Select(t => t.Direction).ToArray();
+            //向量单元化
+            for (int i = 0; i < v.Length; i++)
+                v[i].Unitize();
+            //获取方向向量，计算角度,并保证是正的
+            var a = v.Select(t => Math.Asin(t.Z < 0 ? -t.Z : t.Z) * 57.29).ToArray();
+
+            DA.SetDataList(0, ll);
             DA.SetDataList(1, a);
-        }
 
-        protected override void AfterSolveInstance()
-        {
-            double s = 1 / Math.Max(Math.Tan(A1.Max), 0.01);//避免分母太大
-            string rs = "0 to " + (s < 1 ? $"1/{Math.Round(1 / s, 2)}" : $"{s}/1");
-            IGH_Param o2 = Params.Output[2];
-            o2.ClearData();
-            o2.AddVolatileData(new GH_Path(0), 0, rs);
-            IGH_Param o3 = Params.Output[3];
-            o3.ClearData();
-            o3.AddVolatileData(new GH_Path(0), 0, A1);
+            Interval ai = a.ToInterval();//获取角度区间
+            double s = Math.Max(Math.Tan(ai.Max), 0.01);//避免分母太大，计算坡度较大值
+            string rs = "0 to " + (s > 1 ? $"1/{Math.Round(s, 2)}" : $"{1 / s}/1");//格式化坡度范围
+            DA.SetData(2, rs);
+            DA.SetData(3, new Interval(Math.Round(ai.T0, 2), Math.Round(ai.T1, 2)));//格式化角度范围
+
+            Interval interval = GI ? ai : A0;
+            C.Add(a.Select(t => Gradient.ColourAt(interval.NormalizedParameterAt(t))).ToList());
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
@@ -881,7 +880,6 @@ namespace Lt.Analysis
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-            if (L.Count == 0) return;
             for (int i = 0; i < L.Count; i++)
                 for (int j = 0; j < L[i].Count; j++)
                     args.Display.DrawLine(L[i][j].Value, Attributes.GetTopLevel.Selected ? args.WireColour_Selected : C[i][j]);
@@ -910,16 +908,10 @@ namespace Lt.Analysis
             => m_attributes = new LTSA_Attributes(this);
 
         protected List<List<GH_Line>> L = new List<List<GH_Line>>(5);
-        protected List<List<double>> A = new List<List<double>>(5);
 
-        protected List<List<Color>> C
-            => A.Select(t0
-                    => t0.Select(t1
-                        => Gradient.ColourAt((GI ? A1 : A0).NormalizedParameterAt(t1))).ToList())
-                .ToList();
+        protected List<List<Color>> C = new List<List<Color>>(5);
 
         protected Interval A0 = new Interval(0, 90);
-        protected Interval A1;
         /// <summary>
         /// 渐变是否自适应角度范围，否则为0-90度
         /// </summary>
