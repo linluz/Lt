@@ -99,14 +99,17 @@ namespace Lt.Majas
 
         public override bool Read(GH_IReader reader)
         {
-            base.Read(reader);
-            return reader.GetGradient("渐变", Gradient);
+            Gradient = reader.GetGradient("渐变");
+            ReCom = reader.GetBoolean("重算否");
+            return base.Read(reader);
+
         }
 
         public override bool Write(GH_IWriter writer)
         {
-            base.Write(writer);
-            return writer.SetGradient("渐变", Gradient);
+            writer.SetGradient("渐变", Gradient);
+            writer.SetBoolean("重算否", ReCom);
+            return base.Write(writer);
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
@@ -114,7 +117,7 @@ namespace Lt.Majas
                 "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】",
                 ReCom);
 
-        protected bool ReCom = false;
+        protected bool ReCom;
         protected GH_Gradient Gradient;
     }
 
@@ -125,19 +128,18 @@ namespace Lt.Majas
         /// </summary>
         /// <param name="grac">被添加至的电池</param>
         /// <param name="gra">电池中对应使用的渐变</param>
-        public MGradientMenuItem( GH_Gradient gra, MouseEventHandler even)
+        public MGradientMenuItem(GH_Gradient gra, MouseEventHandler even)
         {
             Gradient = gra;
             DisplayStyle = ToolStripItemDisplayStyle.None;
             Text = "渐变预设";
             Margin = new Padding(1);
             Paint += LT_GradientMenuItem_Paint;
-            if(even!=null)
+            if (even != null)
                 MouseDown += even;
         }
 
         public GH_Gradient Gradient { get; set; }
-        public int Index { get; set; }
         private void LT_GradientMenuItem_Paint(object sender, PaintEventArgs e)
         {
             Rectangle contentRectangle = ContentRectangle;
@@ -466,7 +468,7 @@ namespace Lt.Majas
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
         /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null,bool recom=false)
+        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null, bool recom = false)
         {
             ToolStripMenuItem dou = Menu_AppendItem(menu, text);
             if (!string.IsNullOrWhiteSpace(tooltip))
@@ -516,7 +518,7 @@ namespace Lt.Majas
                 });
             return col;
         }
-       /// <summary>
+        /// <summary>
         /// 绘制设置渐变菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
@@ -532,7 +534,6 @@ namespace Lt.Majas
                 gradient.ToolTipText = tooltip;
             if (gradient.DropDown is ToolStripDropDownMenu downMenu)
                 downMenu.ShowImageMargin = false;
-
             List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets.ToArray().ToList();
             //把默认值插入为第一个
             gradientPresets.Insert(0, def);
@@ -545,19 +546,15 @@ namespace Lt.Majas
                     ExpireSolution(false);
                 else
                     ExpirePreview(false);
-            }
-
-            for (int i = 0; i <= gradientPresets.Count - 1; i++)
-            {
-                MGradientMenuItem GraMenuItem = new MGradientMenuItem(gradientPresets[i], GradientPresetClicked)
-                {
-                    Index = i
-                };
-                gradient.DropDownItems.Add(GraMenuItem);
-            }
+            }//创建点击事件 本地方法
+            //把渐变都添加到菜单中
+            foreach (GH_Gradient t in gradientPresets)
+                gradient.DropDownItems.Add(new MGradientMenuItem(t, GradientPresetClicked));
+            //插入提示文本
+            gradient.DropDownItems[0].ToolTipText = "当前渐变";
             return gradient;
         }
-       #endregion
+        #endregion
         public sealed override bool Locked
         {
             get => base.Locked;
@@ -881,7 +878,7 @@ namespace Lt.Majas
         [Flags]
         public enum ParamTrait
         {
-            Item = 1<<0,//同 GH_ParamAccess，三项只能有一项，否则只执行数值小的项
+            Item = 1 << 0,//同 GH_ParamAccess，三项只能有一项，否则只执行数值小的项
             List = 1 << 1,
             Tree = 1 << 2,
             //todo 需要实现
@@ -949,7 +946,7 @@ namespace Lt.Majas
         {
             using (IEnumerator<double> e = l.GetEnumerator())
             {
-                if(!e.MoveNext())
+                if (!e.MoveNext())
                     return Interval.Unset;
                 var i0 = e.Current;
                 var i1 = e.MoveNext() ? e.Current : i0;
@@ -962,17 +959,15 @@ namespace Lt.Majas
         }
 
         #region Gradient
-        public static bool GetGradient(this GH_IReader reader, string item_name, GH_Gradient gra)
+        public static GH_Gradient GetGradient(this GH_IReader reader, string item_name)
         {
-            if (!(reader.FindChunk(item_name) is GH_IReader r)) return false;
-            gra.Read(r);
-            return true;
+            GH_Gradient gra = new GH_Gradient();
+            gra.Read(reader.FindChunk(item_name));
+            return gra;
         }
-        public static bool SetGradient(this GH_IWriter writer, string item_name, GH_Gradient gra)
-        {
-            GH_IWriter w = writer.CreateChunk(item_name);
-            return gra.Write(w);
-        }
+
+        public static void SetGradient(this GH_IWriter writer, string item_name, GH_Gradient gra)
+            => gra.Write(writer.CreateChunk(item_name));
         #endregion
     }
 }
