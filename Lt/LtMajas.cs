@@ -21,7 +21,6 @@ using Rhino;
 using System.Reflection;
 
 // ReSharper disable UnusedMember.Global
-
 namespace Lt.Majas
 {
     /// <summary>
@@ -65,7 +64,6 @@ namespace Lt.Majas
                     obj_ids.Add(id);
                 }
             }
-
         }
 
         public static GH_Gradient Gradient0 = new GH_Gradient(
@@ -89,34 +87,47 @@ namespace Lt.Majas
         }
     }
 
+    public abstract class AOComponent : MOComponent
+    {
+        protected AOComponent(string name, string nickname, string subCategory, string id, string nname, Bitmap icon = null) :
+            base(name, nickname, "", "LT", subCategory, id, nname, icon)
+        { }
+    }
+
     public abstract class GradientComponent : AComponent
     {
         protected GradientComponent(string name, string nickname, string description, string subCategory, string id,
             int exposure = 1, Bitmap icon = null) :
             base(name, nickname, description, subCategory, id, exposure, icon)
-        {
-        }
+        { }
 
         public override bool Read(GH_IReader reader)
         {
             Gradient = reader.GetGradient("渐变");
+            Rev.Value = reader.GetBoolean("反转渐变");
             ReCom = reader.GetBoolean("重算否");
             return base.Read(reader);
-
         }
 
         public override bool Write(GH_IWriter writer)
         {
             writer.SetGradient("渐变", Gradient);
+            writer.SetBoolean("反转渐变", Rev.Value);
             writer.SetBoolean("重算否", ReCom);
             return base.Write(writer);
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-            => Menu_Gradient(menu, "渐变", Gradient,
+        {
+            Menu_Gradient(menu, "渐变(&G)", Gradient, Rev,
                 "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】",
                 ReCom);
+        }
 
+        protected Color Dou2Col(Interval it, double v)
+            => Gradient.Double2GraColor(it, v, Rev.Value);
+
+        protected GH_Boolean Rev = new GH_Boolean(false);
         protected bool ReCom;
         protected GH_Gradient Gradient;
     }
@@ -165,6 +176,7 @@ namespace Lt.Majas
             e.Graphics.DrawRectangle(Pens.Black, contentRectangle);
         }
     }
+
     public abstract class MComponent : GH_Component
     {
         protected MComponent(string name, string nickname, string description, string category, string subCategory,
@@ -468,9 +480,10 @@ namespace Lt.Majas
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
         /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null, bool recom = false)
+        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null,
+            Image icon = null, bool recom = false)
         {
-            ToolStripMenuItem dou = Menu_AppendItem(menu, text);
+            ToolStripMenuItem dou = Menu_AppendItem(menu, text, null, icon);
             if (!string.IsNullOrWhiteSpace(tooltip))
                 dou.ToolTipText = tooltip;
             Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture), null,
@@ -502,14 +515,16 @@ namespace Lt.Majas
         /// <returns>设置好的菜单项</returns>
         public ToolStripMenuItem Menu_Color(ToolStripDropDown menu, string text, GH_Colour def, string tooltip = null, bool recom = false)
         {
-            ToolStripMenuItem col = Menu_AppendItem(menu, text);
+            Color c = def.Value;
+            ToolStripMenuItem col = Menu_AppendItem(menu, text, null, c.ToSprite(20, 20));
             if (!string.IsNullOrWhiteSpace(tooltip))
                 col.ToolTipText = tooltip;
-            Menu_AppendColourPicker(col.DropDown, def.Value,
+            Menu_AppendColourPicker(col.DropDown, c,
                 (sender, e) =>
                 {
                     RecordUndoEvent($"设置{text}");
                     def.Value = e.Colour;
+                    col.Image = e.Colour.ToSprite(20, 20);
                     if (recom)
 
                         ExpireSolution(false);
@@ -527,9 +542,10 @@ namespace Lt.Majas
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
         /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Gradient(ToolStripDropDown menu, string text, GH_Gradient def, string tooltip = null, bool recom = false)
+        public ToolStripMenuItem Menu_Gradient(ToolStripDropDown menu, string text, GH_Gradient def, GH_Boolean rev, string tooltip = null, bool recom = false)
         {
             ToolStripMenuItem gradient = Menu_AppendItem(menu, text);
+            gradient.Image = LTResource.Gradient_20x20;
             if (!string.IsNullOrWhiteSpace(tooltip))
                 gradient.ToolTipText = tooltip;
             if (gradient.DropDown is ToolStripDropDownMenu downMenu)
@@ -541,17 +557,40 @@ namespace Lt.Majas
             {
                 MGradientMenuItem GradientMenuItem = (MGradientMenuItem)s;
                 RecordUndoEvent($"设置{text}");
-                def = GradientMenuItem.Gradient;
+                //删除旧的
+                for (int i = def.GripCount - 1; i >= 0; i--)
+                    def.RemoveGrip(i);
+                //添加新的
+                for (int i = 0; i < GradientMenuItem.Gradient.GripCount; i++)
+                    def.AddGrip(GradientMenuItem.Gradient[i]);
+
                 if (recom)
-                    ExpireSolution(false);
+                    ExpireSolution(true);
                 else
-                    ExpirePreview(false);
+                    ExpirePreview(true);
             }//创建点击事件 本地方法
             //把渐变都添加到菜单中
             foreach (GH_Gradient t in gradientPresets)
                 gradient.DropDownItems.Add(new MGradientMenuItem(t, GradientPresetClicked));
             //插入提示文本
             gradient.DropDownItems[0].ToolTipText = "当前渐变";
+
+            #region 反转渐变
+            //去除 渐变项文本中的(&)
+            var t0 = text.IndexOf("(&", StringComparison.Ordinal);
+            var t1 = t0 < 0 ? text : text.Substring(0, t0);
+            ToolStripMenuItem m = Menu_AppendItem(menu, $"反转{t1}(&R)",
+                delegate
+                {
+                    rev.Value = !rev.Value;
+                    if (recom)
+                        ExpireSolution(true);
+                    else
+                        ExpirePreview(true);
+                });
+            m.ToolTipText = "仅反转渐变的映射效果，不修改渐变数据";
+            m.Checked = rev.Value;
+            #endregion
             return gradient;
         }
         #endregion
@@ -687,17 +726,18 @@ namespace Lt.Majas
             public T AddOP<T>(string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item) where T : IGH_Param, new()
                 => AddP(true, new T(), name, nickname, description, trait);
-            private int AddP(bool io, ParT type, string name, string nickname, string description,
+            internal int AddP(bool io, ParT type, string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item, params object[] def)
                 => AddP(io, PT2IParam(type, def), name, nickname, description, trait);
-            private int AddP(bool io, IGH_Param ip, string name, string nickname, string description,
+            internal int AddP(bool io, IGH_Param ip, string name, string nickname, string description,
                 ParamTrait trait)
             {
                 FixUpParameter(ip, name, nickname, description);
                 this[io].Add(SetTrait(ip, trait));
                 return this[io].Count - 1;
             }
-            private T AddP<T>(bool io, T ip, string name, string nickname, string description,
+
+            internal T AddP<T>(bool io, T ip, string name, string nickname, string description,
                 ParamTrait trait) where T : IGH_Param
             {
                 FixUpParameter(ip, name, nickname, description);
@@ -834,7 +874,7 @@ namespace Lt.Majas
             }
 
             /// <summary>
-            /// 生成类型为Q的参数端，并将默认值设置给其 待 debug
+            /// 生成类型为Q的参数端，并将默认值设置给其
             /// </summary>
             /// <typeparam name="Q">输出的参数端具体类型</typeparam>
             /// <param name="def">默认数据，无则不输入,若其类型不被参数端所接受则会添加等量的默认类型的默认实例</param>
@@ -856,18 +896,18 @@ namespace Lt.Majas
             public int IParamCount => this[false].Count;
             public int OParamCount => this[true].Count;
             /// <summary>
-            /// 
+            /// 获取参数列表
             /// </summary>
             /// <param name="io">true为输入，false为输入</param>
-            /// <returns></returns>
+            /// <returns>对应的输入或输出端列表</returns>
             public List<IGH_Param> this[bool io]
                 => io ? m_owner.Params.Output : m_owner.Params.Input;
             /// <summary>
-            /// 
+            /// 按索引获取参数端
             /// </summary>
             /// <param name="io">true为输入，false为输入</param>
             /// <param name="index"></param>
-            /// <returns></returns>
+            /// <returns>对应的参数端</returns>
             public IGH_Param this[bool io, int index]
                 => this[io][index];
             internal MComponent m_owner;
@@ -893,6 +933,24 @@ namespace Lt.Majas
             Graft = 1 << 11//升枝，不能与上同时存在
         }
 #endif
+    }
+
+    public abstract class MOComponent : MComponent
+    {
+        protected MOComponent(string name, string nickname, string description, string category, string subCategory, string id, string nname, Bitmap icon = null) :
+            base(name, nickname, description, category, subCategory, id, 0, icon)
+        {
+            NewName = nname;
+        }
+
+        protected override void BeforeSolveInstance()
+            => AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"此电池已过期，请自行手工替换为新电池【{NewName}】！");
+
+        protected override void SolveInstance(IGH_DataAccess DA)
+        { }
+
+        public override bool Obsolete => true;
+        public string NewName;
     }
 
     [Serializable]
@@ -957,6 +1015,33 @@ namespace Lt.Majas
                 return r;
             }
         }
+        /// <summary>
+        /// 根据尺寸生成纯色图片
+        /// </summary>
+        /// <param name="c">颜色</param>
+        /// <param name="w">宽度</param>
+        /// <param name="h">高度</param>
+        /// <returns>生成的纯色图片</returns>
+        public static Bitmap ToBitmap(this Color c, int w, int h)
+        {
+            Bitmap bmp = new Bitmap(w, h);
+            for (int i = 0; i < w; i++)
+                for (int j = 0; j < h; j++)
+                    bmp.SetPixel(i, j, c);
+            return bmp;
+        }
+
+        public static Bitmap ToSprite(this Color c, int w, int h)
+        {
+            Bitmap b0 = new Bitmap(w, h);
+            using (Bitmap b= LTResource.Sprite_20x20)
+            {
+                for (int i = 0; i < 20; i++)
+                for (int j = 0; j < 20; j++)
+                        b0.SetPixel(i, j, Color.FromArgb(b.GetPixel(i,j).A,c));
+            }
+            return b0;
+        }
 
         #region Gradient
         public static GH_Gradient GetGradient(this GH_IReader reader, string item_name)
@@ -968,6 +1053,41 @@ namespace Lt.Majas
 
         public static void SetGradient(this GH_IWriter writer, string item_name, GH_Gradient gra)
             => gra.Write(writer.CreateChunk(item_name));
+        /// <summary>
+        /// 将数值按区间转换成渐变色彩
+        /// </summary>
+        /// <param name="gra">渐变</param>
+        /// <param name="it">数值所在区间范围</param>
+        /// <param name="v">数值</param>
+        /// <param name="reverse">是否反转渐变</param>
+        /// <returns>数值对应的色彩</returns>
+        public static Color Double2GraColor(this GH_Gradient gra, Interval it, double v, bool reverse)
+        {
+            var n = it.NormalizedParameterAt(v);
+            return gra.ColourAt(reverse ? 1 - n : n);
+        }
+        public static GH_Gradient CopyFrom(this GH_Gradient g0, GH_Gradient g1)
+        {
+            for (int i = g0.GripCount - 1; i >= 0; i--)
+                g0.RemoveGrip(i);
+            for (int i = 0; i < g1.GripCount; i++)
+                g0.AddGrip(g1[i].Parameter, g1[i].ColourLeft, g1[i].ColourRight);
+            g0.Linear = g1.Linear;
+            g0.Locked = g1.Locked;
+
+            return g0;
+        }
+        public static GH_Gradient Duplicate(this GH_Gradient g1)
+        {
+            GH_Gradient g0 = new GH_Gradient
+            {
+                Linear = g1.Linear,
+                Locked = g1.Locked
+            };
+            for (int i = 0; i < g1.GripCount; i++)
+                g0.AddGrip(g1[i].Parameter, g1[i].ColourLeft, g1[i].ColourRight);
+            return g0;
+        }
         #endregion
     }
 }
