@@ -21,7 +21,6 @@ using Rhino.Display;
 
 namespace Lt.Analysis
 {
-    //after 电池名和简称修改统一
     //after 给渐变的电池 加色彩标尺
 
     /// <summary>
@@ -33,10 +32,10 @@ namespace Lt.Analysis
     {
         [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
         public LTMF() : base(
-            "网格淹没分析", "LTMF",
+            "淹没分析(网格)", "LTMF",
             "分析被水淹没后的地形状态",
             "分析",
-            "84474303-59cb-4248-9015-c5a02098fd99", 1, LTResource.山体淹没分析)
+            ID.LTMF, 1, LTResource.山体淹没分析)
         {
             Gradient = new GH_Gradient(
             new[] { 0, 0.16, 0.33, 0.5, 0.67, 0.84, 1 },
@@ -54,11 +53,11 @@ namespace Lt.Analysis
 
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "网格", "M", "要被淹没的山地地形网格");
+            pm.AddIP(ParT.Mesh, "地形", "M", "要被淹没的山地地形网格");
             pm.AddIP(ParT.Number, "高度", "E", "淹没地形的水平面高度");
             pm.AddIP(ParT.Boolean, "摊平", "F", "是否要将水下等高线摊平到水平面，默认为false", def: true);
 
-            pm.AddOP(ParT.Mesh, "网格", "M", "被水淹没后的地形网格");
+            pm.AddOP(ParT.Mesh, "地形", "M", "被水淹没后的地形网格");
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -92,7 +91,7 @@ namespace Lt.Analysis
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-            => Menu_Color(menu, "淹没色彩", DownColor, recom: true);
+            => Menu_Color(menu, "淹没色彩(&F)", DownColor, recom: true);
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
@@ -123,19 +122,19 @@ namespace Lt.Analysis
     public class LTMD : AComponent
     {
         public LTMD()
-            : base("网格坡向分析", "LTMD",
+            : base("坡向分析(网格)", "LTMD",
                 "山坡地形朝向分析,X轴向为东,Y轴向为北" +
                 "\r\n双击电池图标以切换着色模式," +
                 "\r\n注意：顶点着色会焊接网格顶点，可能导致顶点减少，" +
                 "\r\n面着色会把面的每个顶点都解离出来，可能会导致顶点增加",
                 "分析",
-                "3d3ee5a9-c86e-4007-97c6-eb33aa365e27", 1, LTResource.山体坡向分析)
+                ID.LTMD, 1, LTResource.山体坡向分析)
         {
             Shade = true;
         }
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "网格", "M", "要进行坡向分析的山地地形网格");
+            pm.AddIP(ParT.Mesh, "地形", "M", "要进行坡向分析的山地地形网格");
             pm.AddIP(ParT.Colour, "色彩", "C",
                 "各向的色彩，请按上、北、东北、东、东南、南、西南、西、西北的顺序连入9个色彩", ParamTrait.List,
                 new[]
@@ -227,11 +226,11 @@ namespace Lt.Analysis
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-            => Menu_AppendItem(menu, "使用面着色",
-                delegate (object sender, EventArgs e)
+            => Menu_AppendItem(menu, "使用面着色(&F)",
+                delegate
                 {
                     Shade = !Shade;
-                    ((ToolStripMenuItem)sender).Checked = Shade;
+                    ExpireSolution(true);
                 },
                 null, true, Shade);
 
@@ -264,17 +263,14 @@ namespace Lt.Analysis
 
         public override bool Write(GH_IWriter writer)
         {
-            base.Write(writer);
             writer.SetBoolean("面色否", Shade);
-            return true;
+            return base.Write(writer);
         }
 
         public override bool Read(GH_IReader reader)
         {
-            base.Read(reader);
-            if (!reader.ItemExists("面色否")) return false;
             Shade = reader.GetBoolean("面色否");
-            return true;
+            return base.Read(reader);
         }
 
         private static readonly double Num1 = Math.Tan(Math.PI / 8);
@@ -316,19 +312,19 @@ namespace Lt.Analysis
     // ReSharper disable once UnusedMember.Global
     public class LTMG : GradientComponent
     {
-        public LTMG() : base("网格坡度分析", "LTMG",
+        public LTMG() : base("坡度分析(网格)", "LTMG",
             "山地地形坡度分析",
             "分析",
-            "6c33fb8b-9da6-4688-8a1b-d0363350d176", 1, LTResource.山体坡度分析)
+            ID.LTMG, 1, LTResource.山体坡度分析)
         {
-            Gradient = Ty.Gradient0;
+            Gradient = Ty.Gradient0.Duplicate();
             ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "网格", "M", "要进行坡度分析的山地地形网格");
+            pm.AddIP(ParT.Mesh, "地形", "M", "要进行坡度分析的山地地形网格");
 
-            pm.AddOP(ParT.Mesh, "网格", "M", "已按角度着色的地形网格");
+            pm.AddOP(ParT.Mesh, "地形", "M", "已按角度着色的地形网格");
             pm.AddOP(ParT.Interval, "角度", "A", "坡度范围（度）");
         }
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -345,7 +341,7 @@ namespace Lt.Analysis
             Interval ia = ra.ToInterval();
 
             //角度转换为色彩并给予网格
-            tm.VertexColors.AppendColors(ra.Select(t => Gradient.ColourAt(ia.NormalizedParameterAt(t))).ToArray());
+            tm.VertexColors.AppendColors(ra.Select(t => Dou2Col(ia, t)).ToArray());
             DA.SetData(0, tm);
             DA.SetData(1, ia);
         }
@@ -363,19 +359,19 @@ namespace Lt.Analysis
     // ReSharper disable once UnusedMember.Global
     public class LTME : GradientComponent
     {
-        public LTME() : base("高程分析", "LTME",
+        public LTME() : base("高程分析(网格)", "LTME",
             "山地地形高程分析",
             "分析",
-            "1afc0549-5308-47ef-b91c-a2eade694250", 1, icon: LTResource.山体高程分析)
+            ID.LTME, 1, icon: LTResource.山体高程分析)
         {
-            Gradient = Ty.Gradient0;
+            Gradient = Ty.Gradient0.Duplicate();
             ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "网格", "M", "要进行坡度分析的山地地形网格");
+            pm.AddIP(ParT.Mesh, "地形", "M", "要进行坡度分析的山地地形网格");
 
-            pm.AddOP(ParT.Mesh, "网格", "M", "已按海拔着色的地形网格");
+            pm.AddOP(ParT.Mesh, "地形", "M", "已按海拔着色的地形网格");
             pm.AddOP(ParT.Interval, "海拔", "E", "海拔范围（两位小数）");
         }
 
@@ -388,7 +384,7 @@ namespace Lt.Analysis
             Interval ie = new Interval(b.Min.Z, b.Max.Z);
             Mesh cm = tm.DuplicateMesh();
             foreach (Point3f p in tm.Vertices)
-                cm.VertexColors.Add(Gradient.ColourAt(ie.NormalizedParameterAt(p.Z)));
+                cm.VertexColors.Add(Dou2Col(ie, p.Z));
             ie.T0 = Math.Round(ie.T0, 2);
             ie.T1 = Math.Round(ie.T1, 2);
             DA.SetData(0, cm);
@@ -411,16 +407,16 @@ namespace Lt.Analysis
         public LTVL() : base("视线分析", "LTVL",
             "分析在山地某处的可见范围,cpu线程数大于2时自动调用多核计算",
             "分析",
-            "f5b0968b-4de5-45a6-a82b-744f64787e85", 4, LTResource.视线分析)
+            ID.LTVL, 4, LTResource.视线分析)
         { }
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Mesh, "地形", "Mt", "要进行坡度分析的山地地形网格,仅支持单项数据", ParamTrait.Item | ParamTrait.OnlyOne);
             pm.AddIP(ParT.Mesh, "障碍物", "O", "（可选）阻挡视线的障碍物体，,仅支持单列数据", ParamTrait.List | ParamTrait.OnlyOne | ParamTrait.Optional);
-            pm.AddIP(ParT.Point, "观察点", "P", "观察者所在的点位置（不一定在网格上），支持多点观察,仅支持单列数据", ParamTrait.List | ParamTrait.OnlyOne);
+            pm.AddIP(ParT.Point, "观察点", "P", "观察者所在的点位置（可不在网格上），支持多点观察,仅支持单列数据", ParamTrait.List | ParamTrait.OnlyOne);
             pm.AddIP(ParT.Integer, "精度", "A", "分析精度(单位：米)，即分析点阵内的间距,仅支持单项数据", ParamTrait.Item | ParamTrait.OnlyOne);
 
-            pm.AddOP(ParT.Point, "观察点", "O", "观察者视点位置（眼高1m5）", ParamTrait.List);
+            pm.AddOP(ParT.Point, "观察点", "O", "观察者视点位置", ParamTrait.List);
             pm.AddOP(ParT.Point, "可见点", "V", "被看见的点", ParamTrait.List);
         }
 
@@ -528,18 +524,33 @@ namespace Lt.Analysis
             Grid.AddRange(grid);
         }
 
-        protected override void AfterSolveInstance()
-        { }
-
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
-            Menu_Color(menu, "观察点色彩", ColorO);
-            Menu_Double(menu, "观察点尺寸", SizeO);
-            Menu_Color(menu, "可见点色彩", ColorV);
-            Menu_Double(menu, "可见点尺寸", SizeV);
-            Menu_Double(menu, "眼高", EyeHight, "人眼高度", true);
+            Menu_Color(menu, "观察点色彩(&C)", ColorO);
+            Menu_Double(menu, "观察点尺寸(&S)", SizeO, icon: LTResource.PointStyle_20x20);
+            Menu_Color(menu, "可见点色彩(&C)", ColorV);
+            Menu_Double(menu, "可见点尺寸(&S)", SizeV, icon: LTResource.PointStyle_20x20);
+            Menu_Double(menu, "眼高（单位米）(&E)", EyeHight, "人眼高度", icon: LTResource.EyeHight_20x20, recom: true);
+        }
+        public override bool Read(GH_IReader reader)
+        {
+            ColorO.Value = reader.GetDrawingColor("观色");
+            SizeO.Value = reader.GetDouble("观寸");
+            ColorV.Value = reader.GetDrawingColor("见色");
+            SizeV.Value = reader.GetDouble("见寸");
+            EyeHight.Value = reader.GetDouble("眼高");
+            return base.Read(reader);
         }
 
+        public override bool Write(GH_IWriter writer)
+        {
+            writer.SetDrawingColor("观色", ColorO.Value);
+            writer.SetDouble("观寸", SizeO.Value);
+            writer.SetDrawingColor("见色", ColorV.Value);
+            writer.SetDouble("见寸", SizeV.Value);
+            writer.SetDouble("眼高", EyeHight.Value);
+            return base.Write(writer);
+        }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Hidden || !IsPreviewCapable || Locked) return; //电池隐藏或不可预览时跳过
@@ -603,12 +614,12 @@ namespace Lt.Analysis
     // ReSharper disable once UnusedMember.Global
     public class LTCE : GradientComponent
     {
-        public LTCE() : base("等高线高程分析", "LTCE",
+        public LTCE() : base("高程分析(等高线)", "LTCE",
             "分析等高线的高程，并获得其可视化色彩。可直接烘焙出已着色曲线",
             "分析",
-            "b8ddf076-9287-450e-833f-597f81bac1a4", 2, LTResource.等高线高程分析)
+            ID.LTCE, 2, LTResource.等高线高程分析)
         {
-            Gradient = Ty.Gradient0;
+            Gradient = Ty.Gradient0.Duplicate();
             ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)
@@ -634,7 +645,7 @@ namespace Lt.Analysis
 
             DA.SetData(1, r);
             //cd的值转相对于r的标准参数，再获取对应位置色彩
-            var col = cd.Select(d => Gradient.ColourAt(r.NormalizedParameterAt(d))).ToList();
+            var col = cd.Select(d => Dou2Col(r, d)).ToList();
             DA.SetDataList(0, col);
             Col.AddRange(col);
             Cur.AddRange(g);
@@ -676,16 +687,16 @@ namespace Lt.Analysis
     // ReSharper disable once UnusedMember.Global
     public class LTCF : AComponent
     {
-        public LTCF() : base("等高线淹没分析", "LTCF",
+        public LTCF() : base("淹没分析(等高线)", "LTCF",
             "通过等高线数据分析地形的淹没情况。可直接烘焙出已着色曲线",
             "分析",
-            "8dd68005-d905-4990-a802-cfd30413f836", 2, LTResource.等高线淹没分析)
+            ID.LTCF, 2, LTResource.等高线淹没分析)
         { }
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Curve, "等高线", "C", "要进行淹没分析的等高线", ParamTrait.List);
             pm.AddIP(ParT.Integer, "高程", "E", "水面的高程");
-            pm.AddIP(ParT.Boolean, "摊平", "F", "是否要将水下等高线摊平到水平面，默认为false", def: false);
+            pm.AddIP(ParT.Boolean, "摊平", "F", "是否要将水下等高线摊平到水面，默认为false", def: false);
 
             pm.AddOP(ParT.Curve, "未淹线", "Cu", "未淹没区域的等高线", ParamTrait.List);
             pm.AddOP(ParT.Curve, "淹没线", "Cd", "被淹没区域的等高线", ParamTrait.List);
@@ -696,12 +707,6 @@ namespace Lt.Analysis
             {
                 Cu.Clear();
                 Cd.Clear();
-            }
-
-            if (DA.Iteration > 1)
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "本电池仅运算一次，更多数据已被忽略");
-                return;
             }
             #region 输入输出变量初始化
             List<Curve> c = new List<Curve>(2);
@@ -727,8 +732,8 @@ namespace Lt.Analysis
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
-            Menu_Color(menu, "未淹色彩", UpColor);
-            Menu_Color(menu, "淹没色彩", DownColor);
+            Menu_Color(menu, "未淹色彩(&U)", UpColor);
+            Menu_Color(menu, "淹没色彩(&F)", DownColor);
         }
 
         public override bool Read(GH_IReader reader)
@@ -776,7 +781,6 @@ namespace Lt.Analysis
                         args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : DownColor.Value);
                 }
         }
-        //debug 检测多组烘焙后是否达到预期 是否因为多组同名报错
         public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
         {
             doc.BakeColorGroup(Cu, UpColor.Value, "UpWater", att, obj_ids);
@@ -796,9 +800,9 @@ namespace Lt.Analysis
         public LTSA() : base("山路坡度分析", "LTSA",
             "分析山路坡度并按角度赋予其对应色彩",
             "分析",
-            "525ba474-eb6b-43f9-a8c4-b9594f4b33cf", 3, LTResource.山路坡度分析)
+            ID.LTSA, 3, LTResource.山路坡度分析)
         {
-            Gradient = Ty.Gradient0;
+            Gradient = Ty.Gradient0.Duplicate();
             ReCom = GI = true;
         }
         //todo 用户对象版 坡度范围输出端 输出错误 ，分子分母错位
@@ -860,17 +864,17 @@ namespace Lt.Analysis
             DA.SetData(3, new Interval(Math.Round(ai.T0, 2), Math.Round(ai.T1, 2)));//格式化角度范围
 
             Interval interval = GI ? ai : A0;
-            C.Add(a.Select(t => Gradient.ColourAt(interval.NormalizedParameterAt(t))).ToList());
+            C.Add(a.Select(t => Dou2Col(interval, t)).ToList());
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalComponentMenuItems(menu);
-            ToolStripMenuItem m = Menu_AppendItem(menu, "自适应角度",
-                (sender, e) =>
+            ToolStripMenuItem m = Menu_AppendItem(menu, "自适应角度(&A)",
+                delegate
                 {
                     GI = !GI;
-                    ((ToolStripMenuItem)sender).Checked = GI;
+                    ExpireSolution(true);
                 }
                 , null, true, GI);
             m.ToolTipText = "默认不启用，此时渐变色彩范围对应0-90º。" +
