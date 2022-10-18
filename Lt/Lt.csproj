@@ -59,6 +59,7 @@
     <Compile Include="LtComponent.cs" />
     <Compile Include="LtInfo.cs" />
     <Compile Include="LtMajas.cs" />
+    <Compile Include="LtOsboletes.cs" />
     <Compile Include="LTResource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -215,6 +216,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\FuzzySprite_64x64.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.ValueTuple">
+      <Version>4.5.0</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PointStyle_20x20.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\EyeHight_20x20.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Gradient_20x20.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -73,9 +73,29 @@ namespace Lt {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
+        internal static System.Drawing.Bitmap EyeHight_20x20 {
+            get {
+                object obj = ResourceManager.GetObject("EyeHight_20x20", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
         internal static System.Drawing.Bitmap FuzzySprite_64x64 {
             get {
                 object obj = ResourceManager.GetObject("FuzzySprite_64x64", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
+        internal static System.Drawing.Bitmap Gradient_20x20 {
+            get {
+                object obj = ResourceManager.GetObject("Gradient_20x20", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -96,6 +116,16 @@ namespace Lt {
         internal static System.Drawing.Bitmap ltlogo24 {
             get {
                 object obj = ResourceManager.GetObject("ltlogo24", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
+        internal static System.Drawing.Bitmap PointStyle_20x20 {
+            get {
+                object obj = ResourceManager.GetObject("PointStyle_20x20", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
