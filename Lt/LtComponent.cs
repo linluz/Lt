@@ -402,14 +402,15 @@ namespace Lt.Analysis
     /// Terrain Grade
     /// </summary>
     // ReSharper disable once UnusedMember.Global
-    //bug 点在障碍物里面
     public class LTVL : AComponent
     {
         public LTVL() : base("视线分析", "LTVL",
             "分析在山地某处的可见范围,cpu线程数大于2时自动调用多核计算",
             "分析",
             ID.LTVL, 4, LTResource.视线分析)
-        { }
+        {
+           Paral = Environment.ProcessorCount > 1;
+        }
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Mesh, "地形", "Mt", "要进行坡度分析的山地地形网格,仅支持单项数据", ParamTrait.Item | ParamTrait.OnlyOne);
@@ -445,79 +446,59 @@ namespace Lt.Analysis
             int a = 0;
             if (!DA.GetData(3, ref a)) return;
 
-            #region 制作网格上用于测量的点阵
-
+            //制作网格上用于测量的点阵
             BoundingBox mb = new BoundingBox();
             foreach (Point3f p3f in tm.Vertices)
                 mb.Union(new Point3d(p3f));
+
             double px = mb.Min.X;
             double py = mb.Min.Y;
-            int rx = (int)Math.Ceiling((mb.Max.X - px) / a);
-            int ry = (int)Math.Ceiling((mb.Max.Y - py) / a);
-            List<Point3d> grid = new List<Point3d>(rx * ry);
+            int rx = (int)Math.Round((mb.Max.X - px) / a);
+            int ry = (int)Math.Round((mb.Max.Y - py) / a);
+            //获取平面上点阵
+            Point3d[] grid = new Point3d[rx * ry];
             for (int ix = 0; ix < rx; ix++)
-            {
                 for (int iy = 0; iy < ry; iy++)
-                {
-                    Ray3d ray = new Ray3d(new Point3d(px, py, mb.Min.Z), Vector3d.ZAxis);
-                    double pmd = Intersection.MeshRay(tm, ray);
-                    if (RhinoMath.IsValidDouble(pmd) && pmd > 0.0)
-                        grid.Add(ray.PointAt(pmd));
-                    py += a;
-                }
-
-                px += a;
-                py = mb.Min.Y;
-            } //获取网格上点阵制作栅格点阵z射线,与网格相交，交点加入grid
-
-            #endregion
-
-            List<Point3d> pt = new List<Point3d>(pl.Count);
-
-            #region 将观测点投影到地形网格上，并增加眼高
-
-            foreach (Point3d p0 in pl)
+                    grid[ix * ry + iy] = new Point3d(mb.Min.X + ix * a, mb.Min.Y + iy * a, mb.Min.Z);
+            //将点z向投影到网格上
+            Point3d ProjectZ(Point3d t)
             {
-                Point3d p = p0;
+                Ray3d r = new Ray3d(new Point3d(t.X, t.Y, mb.Min.Z), Vector3d.ZAxis); //转换射线
+                double d = Intersection.MeshRay(tm, r); //求交点参数
+                return d < 0 ? Point3d.Unset : r.PointAt(d); //返回点
+            }
 
-                Ray3d rayp = new Ray3d(new Point3d(p.X, p.Y, mb.Min.Z), Vector3d.ZAxis);
-                double pmdp = Intersection.MeshRay(tm, rayp);
-                if (RhinoMath.IsValidDouble(pmdp) && pmdp > 0.0)
-                    p = rayp.PointAt(pmdp);
-                else
-                {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"观测点{p}无法被Z向投影至地形网格上");
-                    return;
-                }
 
-                p.Z += EyeHight.Value; //增加眼高
-                pt.Add(p);
-            } //采样点
+            //将栅格点投影到地形网格上
+            grid = grid.Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();//剔除不在网格上的点
 
-            #endregion
+            //将观测点投影到地形网格上，并增加眼高
+            var pt = pl.Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();
+            for (int i = 0; i < pt.LongLength; i++)
+                pt[i].Z += EyeHight.Value;//增加眼高
 
-            foreach (Mesh m in o) //将障碍物附加入网格
-                tm.Append(m);
+            //获取无遮挡时能被观察到的点
+            var g0 = grid.Where(t =>
+                pt.Aggregate(false, (c, t0) =>
+                    c || Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
+            //剔除被障碍物遮挡
+            grid = g0.Where(t =>
+                pt.Aggregate(false, (c0, t0) =>
 
-            bool[] grib = new bool[grid.Count]; //采样点布尔数组
-
-            foreach (Point3d p in pt)
-                if (Environment.ProcessorCount > 2)
-                    Parallel.For(0, grid.Count, j => //多线程处理每个采样点  
+                    c0 || o.Aggregate(true, (c1, t1) =>
                     {
-                        if (!grib[j]) //grib为否(尚未可见)时 判定当前是否为可见点，与网格上的点阵交点仅为1的即可见点
-                            grib[j] = Intersection.MeshLine(tm, new Line(p, grid[j]), out _).Length == 1;
-                    });
-                else
-                {
-                    for (int j = 0; j < grid.Count; j++)
-                        if (!grib[j]) //grib为否(尚未可见)时 判定当前是否为可见点，与网格上的点阵交点仅为1的即可见点
-                            grib[j] = Intersection.MeshLine(tm, new Line(p, grid[j]), out _).Length == 1;
-                }
-
-            for (int i = grid.Count - 1; i >= 0; i--) //剔除不可见点
-                if (!grib[i])
-                    grid.RemoveAt(i);
+                        if (!c1) return false;
+                        var ml = Intersection.MeshLine(t1, new Line(t0, t), out _);
+                        switch (ml.Length)
+                        {
+                            case 0: return true;
+                            case 1: return ml[0] == t;
+                            default: return false;
+                        }
+                    }
+                    )
+                )
+            ).ToArray();
 
             DA.SetDataList(0, pt);
             Pt.AddRange(pt);
@@ -554,7 +535,7 @@ namespace Lt.Analysis
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            if (Hidden || !IsPreviewCapable || Locked) return; //电池隐藏或不可预览时跳过
+            if (Hidden || !IsPreviewCapable || Locked|| args.Document.PreviewMode==GH_PreviewMode.Shaded) return; //电池隐藏或不可预览时跳过
             args.Viewport.GetFrustumNearPlane(out Plane worldXY);
             foreach (Point3d t in Pt)
                 args.Display.DrawCircle(new Circle(worldXY, t, SizeO.Value), ColorO.Value, args.DefaultCurveThickness);
@@ -607,6 +588,7 @@ namespace Lt.Analysis
         private static GH_Number SizeV = new GH_Number(4);
 
         private static GH_Number EyeHight = new GH_Number(1.5);
+        private readonly bool Paral;
     }
     /// <summary>
     /// 等高线高程分析
