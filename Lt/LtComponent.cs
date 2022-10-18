@@ -402,6 +402,7 @@ namespace Lt.Analysis
     /// Terrain Grade
     /// </summary>
     // ReSharper disable once UnusedMember.Global
+    //bug 点在障碍物里面
     public class LTVL : AComponent
     {
         public LTVL() : base("视线分析", "LTVL",
