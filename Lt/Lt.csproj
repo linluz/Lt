@@ -218,11 +218,6 @@
     <None Include="Resources\FuzzySprite_64x64.png" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.ValueTuple">
-      <Version>4.5.0</Version>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\PointStyle_20x20.png" />
   </ItemGroup>
   <ItemGroup>
