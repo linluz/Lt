@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper.GUI;
@@ -118,7 +117,6 @@ namespace Lt.Analysis
     /// 网格坡向分析
     /// Slope Direction Analysis
     /// </summary>
-    // todo 标明 用户对象版 依赖网格炸开
     public class LTMD : AComponent
     {
         public LTMD()
@@ -788,7 +786,6 @@ namespace Lt.Analysis
             Gradient = Ty.Gradient0.Duplicate();
             ReCom = GI = true;
         }
-        //todo 用户对象版 坡度范围输出端 输出错误 ，分子分母错位
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Curve, "山路", "C", "要分析的山路中线（确保已投影在地形上）", ParamTrait.List);
