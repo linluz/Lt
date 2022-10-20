@@ -690,6 +690,18 @@ namespace Lt.Majas
             /// <param name="trait">参数端状态</param>
             /// <param name="def">默认多个值的话必须使用[]而非List<>，否则会识别不了</param>
             /// <returns>输出设置好的参数端</returns>
+
+            #region AddP
+            /// <summary>
+            /// 添加输入端
+            /// </summary>
+            /// <param name="type">参数端类型</param>
+            /// <param name="name">名称</param>
+            /// <param name="nickname">简称</param>
+            /// <param name="description">定义</param>
+            /// <param name="trait">参数端状态</param>
+            /// <param name="def">默认多个值的话必须使用[]而非List<>，否则会识别不了</param>
+            /// <returns>输出设置好的参数端</returns>
             public int AddIP(ParT type, string name, string nickname, string description
                 , ParamTrait trait = ParamTrait.Item, params object[] def)
                 => AddP(false, type, name, nickname, description, trait, def);
@@ -715,8 +727,8 @@ namespace Lt.Majas
             /// <param name="trait">参数端状态</param>
             /// <returns>输出设置好的参数端</returns>
             public T AddIP<T>(string name, string nickname, string description,
-                ParamTrait trait = ParamTrait.Item) where T : IGH_Param, new()
-           => AddP(false, new T(), name, nickname, description, trait);
+                ParamTrait trait = ParamTrait.Item, params object[] def) where T : IGH_Param, new()
+           => AddP<T>(false, name, nickname, description, trait, def);
             public int AddOP(ParT type, string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item)
                 => AddP(true, type, name, nickname, description, trait);
@@ -725,10 +737,12 @@ namespace Lt.Majas
                 => AddP(true, ip, name, nickname, description, trait);
             public T AddOP<T>(string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item) where T : IGH_Param, new()
-                => AddP(true, new T(), name, nickname, description, trait);
+                => AddP<T>(true, name, nickname, description, trait);
+
             internal int AddP(bool io, ParT type, string name, string nickname, string description,
                 ParamTrait trait = ParamTrait.Item, params object[] def)
                 => AddP(io, PT2IParam(type, def), name, nickname, description, trait);
+
             internal int AddP(bool io, IGH_Param ip, string name, string nickname, string description,
                 ParamTrait trait)
             {
@@ -737,16 +751,20 @@ namespace Lt.Majas
                 return this[io].Count - 1;
             }
 
-            internal T AddP<T>(bool io, T ip, string name, string nickname, string description,
-                ParamTrait trait) where T : IGH_Param
+            internal T AddP<T>(bool io, string name, string nickname, string description,
+                ParamTrait trait, params object[] def) where T : IGH_Param, new()
             {
+                T ip = SetGHP<T>(def);
                 FixUpParameter(ip, name, nickname, description);
+
                 this[io].Add(SetTrait(ip, trait));
                 return ip;
             }
 
+            #endregion
+
             #region ParamTrait
-            private IGH_Param SetTrait(IGH_Param ip, ParamTrait t)
+            private static IGH_Param SetTrait(IGH_Param ip, ParamTrait t)
             {
                 ip.Access = Trait2Access(t);
                 if (t.HasFlag(ParamTrait.Hidden) && ip is IGH_PreviewObject ipo)
