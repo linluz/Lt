@@ -19,6 +19,7 @@ using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino;
 using System.Reflection;
+using Grasshopper.GUI;
 
 // ReSharper disable UnusedMember.Global
 namespace Lt.Majas
@@ -443,7 +444,7 @@ namespace Lt.Majas
         /// 绘制设置整数菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
-        /// <param name="text">文本</param>
+        /// <param name="text">项名称</param>
         /// <param name="def">预设值及要被修改的值</param>
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
@@ -453,29 +454,53 @@ namespace Lt.Majas
             ToolStripMenuItem dou = Menu_AppendItem(menu, text);
             if (!string.IsNullOrWhiteSpace(tooltip))
                 dou.ToolTipText = tooltip;
-            Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture), null,
-                (sender, s) =>
+            ToolStripTextBox te = Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture),
+                (s, e) =>
                 {
-                    if (int.TryParse(s, out int d))
+                    switch (e.KeyData)
                     {
-                        RecordUndoEvent($"设置{text}");
-                        def.Value = d;
-                        if (recom)
-
-                            ExpireSolution(false);
-                        else
-                            ExpirePreview(false);
+                        case Keys.Enter:
+                            SetInteger(s, def, text, recom);//输入回车进行运算
+                            break;
+                        case Keys.Space:
+                            s.CloseEntireMenuStructure();//输入空格和回车时关闭菜单栏
+                            break;
                     }
-                    else
-                        MessageBox.Show("输入的不是整数，请检查");
-                }, false);
+                },
+                (sender, s) =>
+                    sender.TextBoxItem.ForeColor = double.TryParse(s, out double _) ? SystemColors.WindowText : Color.Red
+                , false);
+            te.VisibleChanged += (s, e) => SetInteger((GH_MenuTextBox)s, def, text, recom);
+            te.ToolTipText = "按下回车确定输入并计算，\r\n按下空格关闭输入框";
             return dou;
+        }
+        /// <summary>
+        /// 将输入的整数赋给def
+        /// </summary>
+        /// <param name="s">文本框控件</param>
+        /// <param name="def">被赋值的对象</param>
+        /// <param name="text">对象的显示文本</param>
+        /// <param name="recom">是否重计算</param>
+        private void SetInteger(GH_MenuTextBox s, GH_Integer def, string text, bool recom = false)
+        {
+            if (int.TryParse(s.Text, out int d))
+            {
+                if (def.Value == d) return;
+                RecordUndoEvent($"设置{text}");
+                def.Value = d;
+                if (recom)
+                    ExpireSolution(true);
+                else
+                    ExpirePreview(true);
+            }
+            else
+                s.Text = def.Value.ToString(CultureInfo.InvariantCulture);
         }
         /// <summary>
         /// 绘制设置数值菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
-        /// <param name="text">文本</param>
+        /// <param name="text">项名称</param>
         /// <param name="def">预设值及要被修改的值</param>
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
@@ -486,29 +511,55 @@ namespace Lt.Majas
             ToolStripMenuItem dou = Menu_AppendItem(menu, text, null, icon);
             if (!string.IsNullOrWhiteSpace(tooltip))
                 dou.ToolTipText = tooltip;
-            Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture), null,
-                (sender, s) =>
-                {
-                    if (double.TryParse(s, out double d))
-                    {
-                        RecordUndoEvent($"设置{text}");
-                        def.Value = d;
-                        if (recom)
 
-                            ExpireSolution(false);
-                        else
-                            ExpirePreview(false);
+            ToolStripTextBox te = Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture),
+                (s, e) =>
+                {
+                    switch (e.KeyData)
+                    {
+                        case Keys.Enter:
+                            SetDouble(s, def, text, recom);//输入回车进行运算
+                            break;
+                        case Keys.Space:
+                            s.CloseEntireMenuStructure();//输入空格和回车时关闭菜单栏
+                            break;
                     }
-                    else
-                        MessageBox.Show("输入的不是数值，请检查");
-                }, false);
+                },
+                (sender, s) =>
+                    sender.TextBoxItem.ForeColor = double.TryParse(s, out double _) ? SystemColors.WindowText : Color.Red
+                , false);
+            te.VisibleChanged += (s, e) => SetDouble((GH_MenuTextBox)s, def, text, recom);
+            te.ToolTipText = "按下回车确定输入并计算，\r\n按下空格关闭输入框";
             return dou;
         }
         /// <summary>
-        /// 绘制设置整数菜单项
+        /// 将输入的数值赋给def
+        /// </summary>
+        /// <param name="s">文本框控件</param>
+        /// <param name="def">被赋值的对象</param>
+        /// <param name="text">对象的显示文本</param>
+        /// <param name="recom">是否重计算</param>
+        private void SetDouble(GH_MenuTextBox s, GH_Number def, string text, bool recom = false)
+        {
+            if (double.TryParse(s.Text, out double d))
+            {
+                if (def.Value == d) return;
+                RecordUndoEvent($"设置{text}");
+                def.Value = d;
+                if (recom)
+                    ExpireSolution(true);
+                else
+                    ExpirePreview(true);
+            }
+            else
+                s.Text = def.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// 绘制设置色彩菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
-        /// <param name="text">文本</param>
+        /// <param name="text">项名称</param>
         /// <param name="def">预设值及要被修改的值</param>
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
@@ -537,7 +588,7 @@ namespace Lt.Majas
         /// 绘制设置渐变菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
-        /// <param name="text">文本</param>
+        /// <param name="text">项名称</param>
         /// <param name="def">预设值及要被修改的值</param>
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
