@@ -939,8 +939,7 @@ namespace Lt.Majas
             Item = 1 << 0,//同 GH_ParamAccess，三项只能有一项，否则只执行数值小的项
             List = 1 << 1,
             Tree = 1 << 2,
-            //todo 需要实现
-            OnlyOne = 1 << 3,//配合上面可致 仅接受第一个分支/（的第一项）数据
+
             Hidden = 1 << 4,//隐藏此参数端的预览
             Optional = 1 << 5,//此参数端为可选，此时勿输入不会被报错
             //NamedList = 1 << 6,//此参数端有已命名项，仅当【整数】参数端时有效
@@ -948,7 +947,11 @@ namespace Lt.Majas
             Simplify = 1 << 8,//简化参数路径
             Reverse = 1 << 9,//反转数据数序
             Flatten = 1 << 10,//摊平，不能与下同时存在，否则只执行摊平
-            Graft = 1 << 11//升枝，不能与上同时存在
+            Graft = 1 << 11,//升枝，不能与上同时存在
+            //todo 下三需要实现
+            OneItem = 1 << 12,//每个列表仅接受一项
+            OneList = 1 << 13,//仅接受一列
+            OnlyOne = OneItem | OneList// 仅接受一个数据
         }
 #endif
     }
