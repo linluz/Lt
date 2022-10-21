@@ -696,15 +696,13 @@ namespace Lt.Analysis
             if (!DA.GetData(1, ref e)) return;
             bool f = false;
             if (!DA.GetData(2, ref f)) return;
-            List<Curve> lu = new List<Curve>(2);
-            List<Curve> ld = new List<Curve>(2);
             #endregion
             Plane ep = new Plane(new Point3d(0, 0, e), new Vector3d(0, 0, 1));
-            foreach (Curve c0 in c)
-                if (c0.PointAtStart.Z > e)
-                    lu.Add(c0);
-                else
-                    ld.Add(f ? Curve.ProjectToPlane(c0, ep) : c0);
+
+            var c0 = c.GroupBy(t => t.PointAtStart.Z > e)//分组
+                .OrderBy(t=>t.Key).ToArray();//排序，false在前
+            List<Curve> ld = c0.First().Select(t => f ? Curve.ProjectToPlane(t, ep) : t).ToList();
+            List<Curve> lu = c0.Last().ToList();
             DA.SetDataList(0, lu);
             Cu.Add(lu.Select(t => new GH_Curve(t)).ToList());
             DA.SetDataList(1, ld);
