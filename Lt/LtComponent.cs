@@ -62,15 +62,12 @@ namespace Lt.Analysis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 初始化 获取输入
-
             Mesh t0 = new Mesh();
-            if (!DA.GetData(0, ref t0))
-                return;
             double e0 = 0;
-            if (!DA.GetData(1, ref e0))
-                return;
             bool f = false;
-            if (!DA.GetData(2, ref f))
+            if (!DA.GetData(0, ref t0) 
+                || !DA.GetData(1, ref e0) 
+                || !DA.GetData(2, ref f))
                 return;
             #endregion
 
@@ -154,21 +151,17 @@ namespace Lt.Analysis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 初始化 获取输入
-
             Mesh t0 = new Mesh();
-            if (!DA.GetData(0, ref t0))
-                return;
             List<Color> c = new List<Color>(9);
-            if (!DA.GetDataList(1, c))
+            if (!DA.GetData(0, ref t0)
+                || !DA.GetDataList(1, c))
                 return;
             if (c.Count != 9)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "输入色彩数量不等于9！不足已补充为最后一项,多出已忽视。");
-                if (c.Count < 9)
-                    for (int i = c.Count; i < 9; i++)
-                        c.Add(c[i - 1]);
+                for (int i = c.Count; i < 9; i++)
+                    c.Add(c[i - 1]);
             }
-
             #endregion
             if (Shade)
             {
@@ -219,8 +212,6 @@ namespace Lt.Analysis
                 foreach (Vector3f t in t0.Normals)
                     t0.VertexColors.Add(c[DShade(t)]);
             }
-
-            DA.SetData(0, t0);
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
@@ -435,14 +426,14 @@ namespace Lt.Analysis
             }
 
             Mesh tm = new Mesh();
-            if (!DA.GetData(0, ref tm) && !tm.IsValid) return;
             List<Mesh> o = new List<Mesh>(3);
-            DA.GetDataList(1, o);
             List<Point3d> pl = new List<Point3d>();
-            if (!DA.GetDataList(2, pl)) return;
-
             int a = 0;
-            if (!DA.GetData(3, ref a)) return;
+            if (!DA.GetData(0, ref tm) && !tm.IsValid
+                || !DA.GetDataList(2, pl)
+                || !DA.GetData(3, ref a)) 
+                return;
+            DA.GetDataList(1, o);
 
             //制作网格上用于测量的点阵
             BoundingBox mb = new BoundingBox();
@@ -691,11 +682,12 @@ namespace Lt.Analysis
             }
             #region 输入输出变量初始化
             List<Curve> c = new List<Curve>(2);
-            if (!DA.GetDataList(0, c)) return;
             int e = 0;
-            if (!DA.GetData(1, ref e)) return;
             bool f = false;
-            if (!DA.GetData(2, ref f)) return;
+            if (!DA.GetDataList(0, c)
+                || !DA.GetData(1, ref e)
+                || !DA.GetData(2, ref f))
+                return;
             #endregion
             Plane ep = new Plane(new Point3d(0, 0, e), new Vector3d(0, 0, 1));
 
@@ -796,18 +788,19 @@ namespace Lt.Analysis
         }
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            #region 输入输出变量初始化
-
             if (DA.Iteration == 0)
             {
                 L.Clear();
                 C.Clear();
             }
 
+            #region 输入输出变量初始化
+
             List<Curve> cl = new List<Curve>(0);
-            if (!DA.GetDataList(0, cl) || cl.Count == 0) return;
             int e = 0;
-            if (!DA.GetData(1, ref e)) return;
+            if (!DA.GetDataList(0, cl) || cl.Count == 0
+                || !DA.GetData(1, ref e)) 
+                return;
             #endregion
 
             Line[][] la = cl.Select(t =>
