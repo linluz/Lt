@@ -402,10 +402,10 @@ namespace Lt.Analysis
         }
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "地形", "Mt", "要进行坡度分析的山地地形网格,仅支持单项数据", ParamTrait.Item | ParamTrait.OnlyOne);
-            pm.AddIP(ParT.Mesh, "障碍物", "O", "（可选）阻挡视线的障碍物体，,仅支持单列数据", ParamTrait.List | ParamTrait.OnlyOne | ParamTrait.Optional);
-            pm.AddIP(ParT.Point, "观察点", "P", "观察者所在的点位置（可不在网格上），支持多点观察,仅支持单列数据", ParamTrait.List | ParamTrait.OnlyOne);
-            pm.AddIP(ParT.Integer, "精度", "A", "分析精度(单位：米)，即分析点阵内的间距,仅支持单项数据", ParamTrait.Item | ParamTrait.OnlyOne);
+            pm.AddIP(ParT.Mesh, "地形", "Mt", "要进行坡度分析的山地地形网格");
+            pm.AddIP(ParT.Mesh, "障碍物", "O", "（可选）阻挡视线的障碍物体，", ParamTrait.List | ParamTrait.Optional);
+            pm.AddIP(ParT.Point, "观察点", "P", "观察者所在的点位置（可不在网格上），支持多点观察", ParamTrait.List);
+            pm.AddIP(ParT.Integer, "精度", "A", "分析精度(单位：米)，即分析点阵内的间距");
 
             pm.AddOP(ParT.Point, "观察点", "O", "观察者视点位置", ParamTrait.List);
             pm.AddOP(ParT.Point, "可见点", "V", "被看见的点", ParamTrait.List);
@@ -419,12 +419,6 @@ namespace Lt.Analysis
                 Grid.Clear();
             }
 
-            if (DA.Iteration > 1)
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "超出数据已被忽视");
-                return;
-            }
-
             Mesh tm = new Mesh();
             List<Mesh> o = new List<Mesh>(3);
             List<Point3d> pl = new List<Point3d>();
@@ -434,6 +428,8 @@ namespace Lt.Analysis
                 || !DA.GetData(3, ref a)) 
                 return;
             DA.GetDataList(1, o);
+
+            Point3d[] pt, grid;
 
             //制作网格上用于测量的点阵
             BoundingBox mb = new BoundingBox();
@@ -445,10 +441,10 @@ namespace Lt.Analysis
             int rx = (int)Math.Round((mb.Max.X - px) / a);
             int ry = (int)Math.Round((mb.Max.Y - py) / a);
             //获取平面上点阵
-            Point3d[] grid = new Point3d[rx * ry];
+            Point3d[] grid0 = new Point3d[rx * ry];
             for (int ix = 0; ix < rx; ix++)
                 for (int iy = 0; iy < ry; iy++)
-                    grid[ix * ry + iy] = new Point3d(mb.Min.X + ix * a, mb.Min.Y + iy * a, mb.Min.Z);
+                    grid0[ix * ry + iy] = new Point3d(mb.Min.X + ix * a, mb.Min.Y + iy * a, mb.Min.Z);
             //将点z向投影到网格上
             Point3d ProjectZ(Point3d t)
             {
@@ -457,37 +453,63 @@ namespace Lt.Analysis
                 return d < 0 ? Point3d.Unset : r.PointAt(d); //返回点
             }
 
+            if (Paral)
+            { //将栅格点投影到地形网格上
+                var g0 = grid0.AsParallel().Select(ProjectZ).Where(t => t != Point3d.Unset).AsParallel();//剔除不在网格上的点
 
-            //将栅格点投影到地形网格上
-            grid = grid.Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();//剔除不在网格上的点
+                //将观测点投影到地形网格上，并增加眼高
+                pt = pl.AsParallel().Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();
+                for (int i = 0; i < pt.LongLength; i++)
+                    pt[i].Z += EyeHight.Value;//增加眼高
 
-            //将观测点投影到地形网格上，并增加眼高
-            var pt = pl.Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();
-            for (int i = 0; i < pt.LongLength; i++)
-                pt[i].Z += EyeHight.Value;//增加眼高
-
-            //获取无遮挡时能被观察到的点
-            var g0 = grid.Where(t =>
-                pt.Aggregate(false, (c, t0) =>
-                    c || Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
-            //剔除被障碍物遮挡
-            grid = g0.Where(t =>
-                pt.Aggregate(false, (c0, t0) =>
-
-                    c0 || o.Aggregate(true, (c1, t1) =>
-                    {
-                        if (!c1) return false;
-                        var ml = Intersection.MeshLine(t1, new Line(t0, t), out _);
-                        switch (ml.Length)
+                //获取无遮挡时能被观察到的点
+                g0 = g0.Where(t =>
+                    pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
+                //剔除被障碍物遮挡
+                grid = g0.Where(t =>
+                    pt.Any(t0 =>
+                        o.All(t1 =>
                         {
-                            case 0: return true;
-                            case 1: return ml[0] == t;
-                            default: return false;
-                        }
-                    }
+                            var ml = Intersection.MeshLine(t1, new Line(t0, t), out _);
+                            switch (ml.Length)
+                            {
+                                case 0: return true;
+                                case 1: return ml[0] == t;
+                                default: return false;
+                            }
+                        })
                     )
-                )
-            ).ToArray();
+                ).ToArray();
+            }
+            else
+            {
+                //将栅格点投影到地形网格上
+                var g0 = grid0.Select(ProjectZ).Where(t => t != Point3d.Unset);//剔除不在网格上的点
+
+                //将观测点投影到地形网格上，并增加眼高
+                pt = pl.Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();
+                for (int i = 0; i < pt.LongLength; i++)
+                    pt[i].Z += EyeHight.Value;//增加眼高
+
+                //获取无遮挡时能被观察到的点
+                g0 = g0.Where(t =>
+                    pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
+                //剔除被障碍物遮挡
+                grid = g0.Where(t =>
+                    pt.Any(t0 =>
+                        o.All(t1 =>
+                        {
+                            var ml = Intersection.MeshLine(t1, new Line(t0, t), out _);
+                            switch (ml.Length)
+                            {
+                                case 0: return true;
+                                case 1: return ml[0] == t;
+                                default: return false;
+                            }
+                        })
+                    )
+                ).ToArray();
+            }
 
             DA.SetDataList(0, pt);
             Pt.AddRange(pt);
