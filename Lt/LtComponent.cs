@@ -394,7 +394,7 @@ namespace Lt.Analysis
     public class LTVL : AComponent
     {
         public LTVL() : base("视线分析", "LTVL",
-            "分析在山地某处的可见范围,cpu线程数大于2时自动调用多核计算",
+            "分析在山地某处的可见范围,cpu线程数大于1时自动调用多核计算",
             "分析",
             ID.LTVL, 4, LTResource.视线分析)
         {
