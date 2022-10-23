@@ -560,18 +560,6 @@ namespace Lt.Majas
             else
                 s.Text = def.Value.ToString(CultureInfo.InvariantCulture);
         }
-        //todo 把那些数据 字段 替换成这些函数
-        #region GetData
-        protected List<T> GetIntByItem<T>(int i) where T : IGH_Goo
-            => GetIntByList<T>(i).SelectMany(t => t).ToList();
-
-        protected List<List<T>> GetIntByList<T>(int i) where T : IGH_Goo
-            => ((GH_Structure<T>)Params.Input[i].VolatileData).Branches.ToList();
-        protected List<T> GetOutByItem<T>(int i) where T : IGH_Goo
-            => GetOutByList<T>(i).SelectMany(t => t).ToList();
-        protected List<List<T>> GetOutByList<T>(int i) where T : IGH_Goo
-            => ((GH_Structure<T>)Params.Output[i].VolatileData).Branches.ToList();
-        #endregion
 
         /// <summary>
         /// 绘制设置色彩菜单项
@@ -662,6 +650,18 @@ namespace Lt.Majas
             #endregion
             return gradient;
         }
+        #endregion
+        //todo 把那些数据 字段 替换成这些函数
+        #region GetData
+        protected List<T> GetIntByItem<T>(int i) where T : IGH_Goo
+            => GetIntByList<T>(i).SelectMany(t => t).ToList();
+
+        protected List<List<T>> GetIntByList<T>(int i) where T : IGH_Goo
+            => ((GH_Structure<T>)Params.Input[i].VolatileData).Branches.ToList();
+        protected List<T> GetOutByItem<T>(int i) where T : IGH_Goo
+            => GetOutByList<T>(i).SelectMany(t => t).ToList();
+        protected List<List<T>> GetOutByList<T>(int i) where T : IGH_Goo
+            => ((GH_Structure<T>)Params.Output[i].VolatileData).Branches.ToList();
         #endregion
         public sealed override bool Locked
         {
