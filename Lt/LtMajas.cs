@@ -66,7 +66,13 @@ namespace Lt.Majas
                 }
             }
         }
-
+        /// <summary>
+        /// 将向量转换成坡度
+        /// </summary>
+        /// <param name="t">向量</param>
+        /// <returns>转换后的角度</returns>
+        public static double 向量转坡度(this Vector3d t) => Math.Asin(t.Z < 0 ? -t.Z : t.Z) * 57.29;
+        
         public static GH_Gradient Gradient0 = new GH_Gradient(
             new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
             new[]
@@ -177,7 +183,7 @@ namespace Lt.Majas
             e.Graphics.DrawRectangle(Pens.Black, contentRectangle);
         }
     }
-
+    //todo 1.增加读写动作列表，2.菜单项的相关变量（改成静态，便于读写）塞进菜单项自身中，相关变量的读写塞到读写动作列表里，对应 增加菜单项的动作，新增一个out 输出菜单项（内部处理事，把已有静态变量赋值给新的）
     public abstract class MComponent : GH_Component
     {
         protected MComponent(string name, string nickname, string description, string category, string subCategory,
@@ -554,6 +560,18 @@ namespace Lt.Majas
             else
                 s.Text = def.Value.ToString(CultureInfo.InvariantCulture);
         }
+        //todo 把那些数据 字段 替换成这些函数
+        #region GetData
+        protected List<T> GetIntByItem<T>(int i) where T : IGH_Goo
+            => GetIntByList<T>(i).SelectMany(t => t).ToList();
+
+        protected List<List<T>> GetIntByList<T>(int i) where T : IGH_Goo
+            => ((GH_Structure<T>)Params.Input[i].VolatileData).Branches.ToList();
+        protected List<T> GetOutByItem<T>(int i) where T : IGH_Goo
+            => GetOutByList<T>(i).SelectMany(t => t).ToList();
+        protected List<List<T>> GetOutByList<T>(int i) where T : IGH_Goo
+            => ((GH_Structure<T>)Params.Output[i].VolatileData).Branches.ToList();
+        #endregion
 
         /// <summary>
         /// 绘制设置色彩菜单项
@@ -1072,6 +1090,15 @@ namespace Lt.Majas
             destination = d;
             return b;
         }
+
+        public static GH_Structure<T> ToGhStructure<T>(this IEnumerable<IEnumerable<T>> ll)where T:IGH_Goo
+        {
+            GH_Structure<T> ls = new GH_Structure<T>();
+            foreach (var t in ll)
+                ls.AppendRange(t);
+            return ls;
+        }
+
         public static Interval ToInterval(this IEnumerable<double> l)
         {
             using (IEnumerator<double> e = l.GetEnumerator())
