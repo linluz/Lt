@@ -110,43 +110,47 @@ namespace Lt.Majas
 
         public override bool Read(GH_IReader reader)
         {
-            Gradient = reader.GetGradient("渐变");
-            Rev.Value = reader.GetBoolean("反转渐变");
+            Gra.Def = reader.GetGradient("渐变");
+            Gra.Rev = reader.GetBoolean("反转渐变");
             ReCom = reader.GetBoolean("重算否");
             return base.Read(reader);
         }
 
         public override bool Write(GH_IWriter writer)
         {
-            writer.SetGradient("渐变", Gradient);
-            writer.SetBoolean("反转渐变", Rev.Value);
+            writer.SetGradient("渐变", Gra.Def);
+            writer.SetBoolean("反转渐变", Gra.Rev);
             writer.SetBoolean("重算否", ReCom);
             return base.Write(writer);
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
-            Menu_Gradient(menu, "渐变(&G)", Gradient, Rev,
+            Menu_Gradient(menu, "渐变(&G)", ref Gra,
                 "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】",
-                ReCom);
+              recom:  ReCom);
         }
 
         protected Color Dou2Col(Interval it, double v)
-            => Gradient.Double2GraColor(it, v, Rev.Value);
+            => Gra.Def.Double2GraColor(it, v, Gra.Rev);
 
-        protected GH_Boolean Rev = new GH_Boolean(false);
+        
         protected bool ReCom;
-        protected GH_Gradient Gradient;
+        protected MGradientMenuItem Gra;
     }
+    //todo 1.增加读写动作列表，
+    //todo 2.菜单项的相关变量的读写塞到读写动作列表里，对应 增加菜单项的动作，
+  
 
-    public sealed class MGradientMenuItem : ToolStripMenuItem
+    #region MenuItemClass
+    public sealed class MGradientPresetMenuItem : ToolStripMenuItem
     {
         /// <summary>
         /// 添加渐变菜单项
         /// </summary>
         /// <param name="grac">被添加至的电池</param>
         /// <param name="gra">电池中对应使用的渐变</param>
-        public MGradientMenuItem(GH_Gradient gra, MouseEventHandler even)
+        public MGradientPresetMenuItem(GH_Gradient gra, MouseEventHandler even)
         {
             Gradient = gra;
             DisplayStyle = ToolStripItemDisplayStyle.None;
@@ -183,8 +187,272 @@ namespace Lt.Majas
             e.Graphics.DrawRectangle(Pens.Black, contentRectangle);
         }
     }
-    //todo 1.增加读写动作列表，2.菜单项的相关变量（改成静态，便于读写）塞进菜单项自身中，相关变量的读写塞到读写动作列表里，对应 增加菜单项的动作，新增一个out 输出菜单项（内部处理事，把已有静态变量赋值给新的）
-    public abstract class MComponent : GH_Component
+    public class MIntegerMenuItem
+    {
+        public MIntegerMenuItem() : this(0)
+        { }
+        public MIntegerMenuItem(int def)
+        {
+            Item = null;
+            TextBox = null;
+            Component = null;
+            Def = def;
+            ReCom = false;
+        }
+        public MIntegerMenuItem(MComponent c, ToolStrip menu, string text, int def, string tooltip = null,
+            Image icon = null, bool recom = false)
+        {
+            Def = def;
+            ReCom = recom;
+            Item = GH_DocumentObject.Menu_AppendItem(menu, text, null, icon);
+            Component = c;
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                Item.ToolTipText = tooltip;
+
+            TextBox = GH_DocumentObject.Menu_AppendTextItem(Item.DropDown, Def.ToString(CultureInfo.InvariantCulture),
+                (s, e) =>
+                {
+                    switch (e.KeyData)
+                    {
+                        case Keys.Enter:
+                            SetInteger(text);//输入回车进行运算
+                            break;
+                        case Keys.Space:
+                            s.CloseEntireMenuStructure();//输入空格和回车时关闭菜单栏
+                            break;
+                    }
+                },
+                (sender, s) =>
+                    sender.TextBoxItem.ForeColor = double.TryParse(s, out double _) ? SystemColors.WindowText : Color.Red
+                , false);
+            TextBox.VisibleChanged += (s, e) => SetInteger(text);
+            TextBox.ToolTipText = "按下回车确定输入并计算，\r\n按下空格关闭输入框";
+        }
+        /// <summary>
+        /// 将输入的数值赋给def
+        /// </summary>
+        /// <param name="text">对象的显示文本</param>
+        /// <param name="recom">是否重计算</param>
+        private void SetInteger(string text)
+        {
+            if (!IsVaild) return;
+            if (int.TryParse(TextBox.Text, out int d))
+            {
+                if (Def == d) return;
+                Component.RecordUndoEvent($"设置{text}");
+                Def = d;
+                if (ReCom)
+                    Component.ExpireSolution(true);
+                else
+                    Component.ExpirePreview(true);
+            }
+            else
+                TextBox.Text = Def.ToString(CultureInfo.InvariantCulture);
+        }
+        public int Def;
+        public bool ReCom;
+        public ToolStripMenuItem Item;
+        public ToolStripTextBox TextBox;
+        private readonly MComponent Component;
+        public bool IsVaild => Item != null && TextBox != null && Component != null;
+    }
+    public class MDoubleMenuItem
+    {
+        public MDoubleMenuItem() : this(0)
+        { }
+        public MDoubleMenuItem(double def)
+        {
+            Item = null;
+            TextBox = null;
+            Component = null;
+            Def = def;
+            ReCom = false;
+        }
+        public MDoubleMenuItem(MComponent c, ToolStrip menu, string text, double def, string tooltip = null,
+            Image icon = null, bool recom = false)
+        {
+            Def = def;
+            ReCom = recom;
+            Item = GH_DocumentObject.Menu_AppendItem(menu, text, null, icon);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                Item.ToolTipText = tooltip;
+            Component = c;
+
+            TextBox = GH_DocumentObject.Menu_AppendTextItem(Item.DropDown, Def.ToString(CultureInfo.InvariantCulture),
+                (s, e) =>
+                {
+                    switch (e.KeyData)
+                    {
+                        case Keys.Enter:
+                            SetDouble(text);//输入回车进行运算
+                            break;
+                        case Keys.Space:
+                            s.CloseEntireMenuStructure();//输入空格和回车时关闭菜单栏
+                            break;
+                    }
+                },
+                (sender, s) =>
+                    sender.TextBoxItem.ForeColor = double.TryParse(s, out double _) ? SystemColors.WindowText : Color.Red
+                , false);
+            TextBox.VisibleChanged += (s, e) => SetDouble(text);
+            TextBox.ToolTipText = "按下回车确定输入并计算，\r\n按下空格关闭输入框";
+        }
+        /// <summary>
+        /// 将输入的数值赋给def
+        /// </summary>
+        /// <param name="text">对象的显示文本</param>
+        /// <param name="recom">是否重计算</param>
+        private void SetDouble(string text)
+        {
+            if (!IsVaild) return;
+            if (double.TryParse(TextBox.Text, out double d))
+            {
+                if (Def == d) return;
+                Component.RecordUndoEvent($"设置{text}");
+                Def = d;
+                if (ReCom)
+                    Component.ExpireSolution(true);
+                else
+                    Component.ExpirePreview(true);
+            }
+            else
+                TextBox.Text = Def.ToString(CultureInfo.InvariantCulture);
+        }
+        public double Def;
+        public bool ReCom;
+        public ToolStripMenuItem Item;
+        public ToolStripTextBox TextBox;
+        private readonly MComponent Component;
+        public bool IsVaild => Item != null && TextBox != null && Component != null;
+    }
+    public class MColorMenuItem
+    {
+        public MColorMenuItem() : this(Color.GreenYellow)
+        { }
+        public MColorMenuItem(Color def)
+        {
+            Item = null;
+            ColourPicker = null;
+            Component = null;
+            Def = def;
+            ReCom = false;
+        }
+        public MColorMenuItem(MComponent c, ToolStrip menu, string text, Color def, string tooltip = null,
+            Image icon = null, bool recom = false)
+        {
+            Def = def;
+            ReCom = recom;
+            if (icon == null)
+                icon = def.ToSprite(20, 20);
+            Item = GH_DocumentObject.Menu_AppendItem(menu, text, null, icon);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                Item.ToolTipText = tooltip;
+            Component = c;
+
+            ColourPicker = GH_DocumentObject.Menu_AppendColourPicker(Item.DropDown, def,
+                (sender, e) =>
+                {
+                    if (!IsVaild) return;
+                    Component.RecordUndoEvent($"设置{text}");
+                    Def = e.Colour;
+                    Item.Image = e.Colour.ToSprite(20, 20);
+                    if (ReCom)
+
+                        Component.ExpireSolution(false);
+                    else
+                        Component.ExpirePreview(false);
+                });
+        }
+        public Color Def;
+        public bool ReCom;
+        public ToolStripMenuItem Item;
+        public GH_ColourPicker ColourPicker;
+        private readonly MComponent Component;
+        public bool IsVaild => Item != null && ColourPicker != null && Component != null;
+    }
+    public class MGradientMenuItem
+    {
+        public MGradientMenuItem() : this(GH_Gradient.GreyScale())
+        { }
+        public MGradientMenuItem(GH_Gradient def, bool rev=false)
+        {
+            Item = null;
+            Component = null;
+            RevBe = null;
+            Def = def;
+            Rev = rev;
+            ReCom = false;
+        }
+        public MGradientMenuItem(MComponent c, ToolStrip menu, string text, GH_Gradient def, bool rev, string tooltip = null,
+            Image icon = null, bool recom = false)
+        {
+            Def = def;
+            Rev = rev;
+            ReCom = recom;
+            if (icon == null) icon = LTResource.Gradient_20x20;
+            Item = GH_DocumentObject.Menu_AppendItem(menu, text, null, icon);
+            if (!string.IsNullOrWhiteSpace(tooltip))
+                Item.ToolTipText = tooltip;
+            //if (gradient.DropDown is ToolStripDropDownMenu downMenu)
+            //    downMenu.ShowImageMargin = false;
+            Component = c;
+
+            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets.ToArray().ToList();
+            //把默认值插入为第一个
+            gradientPresets.Insert(0, Def);
+            void GradientPresetClicked(object s, MouseEventArgs e)
+            {
+                MGradientPresetMenuItem GradientMenuItem = (MGradientPresetMenuItem)s;
+                Component.RecordUndoEvent($"设置{text}");
+                //删除旧的
+                for (int i = Def.GripCount - 1; i >= 0; i--)
+                    Def.RemoveGrip(i);
+                //添加新的
+                for (int i = 0; i < GradientMenuItem.Gradient.GripCount; i++)
+                    Def.AddGrip(GradientMenuItem.Gradient[i]);
+
+                if (ReCom)
+                    Component.ExpireSolution(true);
+                else
+                    Component.ExpirePreview(true);
+            }//创建点击事件 本地方法
+             //把渐变都添加到菜单中
+            foreach (GH_Gradient t in gradientPresets)
+                Item.DropDownItems.Add(new MGradientPresetMenuItem(t, GradientPresetClicked));
+            //插入提示文本
+            Item.DropDownItems[0].ToolTipText = "当前渐变";
+            #region 反转渐变
+            //去除 渐变项文本中的(&)
+            var t0 = text.IndexOf("(&", StringComparison.Ordinal);
+            var t1 = t0 < 0 ? text : text.Substring(0, t0);
+            RevBe = GH_DocumentObject.Menu_AppendItem(menu, $"反转{t1}(&R)",
+                delegate
+                {
+                    Rev = !Rev;
+                    if (ReCom)
+                        Component.ExpireSolution(true);
+                    else
+                        Component.ExpirePreview(true);
+                });
+            RevBe.ToolTipText = "仅反转渐变的映射效果，不修改渐变数据";
+            RevBe.Checked = Rev;
+            #endregion
+
+
+        }
+        public GH_Gradient Def;
+        public bool Rev;
+        public bool ReCom;
+        public ToolStripMenuItem Item;
+        public ToolStripMenuItem RevBe;
+        private readonly MComponent Component;
+        public bool IsVaild => Def != null && Item != null && RevBe != null && Component != null;
+    }
+
+
+    #endregion
+
+   public abstract class MComponent : GH_Component
     {
         protected MComponent(string name, string nickname, string description, string category, string subCategory,
             string id, int exposure = 1, Bitmap icon = null) : base(name, nickname, description, category, subCategory)
@@ -446,210 +714,56 @@ namespace Lt.Majas
             Instances.DocumentEditor.ScriptAccess_OpenDocument(
                 $@"{Folders.AppDataFolder}Example\{Name}-{NickName}.gh");
         #region MenuItem
-        /// <summary>
+        /// /// <summary>
         /// 绘制设置整数菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
         /// <param name="text">项名称</param>
-        /// <param name="def">预设值及要被修改的值</param>
-        /// <param name="tooltip">提示</param>
+        /// <param name="itg">设置好的菜单项</param>
+        /// <param name="tooltip">提示文本</param>
+        /// <param name="icon"></param>
         /// <param name="recom">重计算？否则仅过期预览</param>
-        /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Integer(ToolStripDropDown menu, string text, GH_Integer def, string tooltip = null, bool recom = false)
-        {
-            ToolStripMenuItem dou = Menu_AppendItem(menu, text);
-            if (!string.IsNullOrWhiteSpace(tooltip))
-                dou.ToolTipText = tooltip;
-            ToolStripTextBox te = Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture),
-                (s, e) =>
-                {
-                    switch (e.KeyData)
-                    {
-                        case Keys.Enter:
-                            SetInteger(s, def, text, recom);//输入回车进行运算
-                            break;
-                        case Keys.Space:
-                            s.CloseEntireMenuStructure();//输入空格和回车时关闭菜单栏
-                            break;
-                    }
-                },
-                (sender, s) =>
-                    sender.TextBoxItem.ForeColor = double.TryParse(s, out double _) ? SystemColors.WindowText : Color.Red
-                , false);
-            te.VisibleChanged += (s, e) => SetInteger((GH_MenuTextBox)s, def, text, recom);
-            te.ToolTipText = "按下回车确定输入并计算，\r\n按下空格关闭输入框";
-            return dou;
-        }
-        /// <summary>
-        /// 将输入的整数赋给def
-        /// </summary>
-        /// <param name="s">文本框控件</param>
-        /// <param name="def">被赋值的对象</param>
-        /// <param name="text">对象的显示文本</param>
-        /// <param name="recom">是否重计算</param>
-        private void SetInteger(GH_MenuTextBox s, GH_Integer def, string text, bool recom = false)
-        {
-            if (int.TryParse(s.Text, out int d))
-            {
-                if (def.Value == d) return;
-                RecordUndoEvent($"设置{text}");
-                def.Value = d;
-                if (recom)
-                    ExpireSolution(true);
-                else
-                    ExpirePreview(true);
-            }
-            else
-                s.Text = def.Value.ToString(CultureInfo.InvariantCulture);
-        }
-        /// <summary>
+        public void Menu_Integer(ToolStripDropDown menu, string text, ref MIntegerMenuItem itg, string tooltip = null,
+            Image icon = null, bool recom = false)
+            => itg = new MIntegerMenuItem(this, menu, text, itg.Def, tooltip, icon, recom);
+        /// /// <summary>
         /// 绘制设置数值菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
         /// <param name="text">项名称</param>
-        /// <param name="def">预设值及要被修改的值</param>
-        /// <param name="tooltip">提示</param>
+        /// <param name="dou">设置好的菜单项</param>
+        /// <param name="tooltip">提示文本</param>
+        /// <param name="icon"></param>
         /// <param name="recom">重计算？否则仅过期预览</param>
-        /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Double(ToolStripDropDown menu, string text, GH_Number def, string tooltip = null,
+        public void Menu_Double(ToolStripDropDown menu, string text, ref MDoubleMenuItem dou, string tooltip = null,
             Image icon = null, bool recom = false)
-        {
-            ToolStripMenuItem dou = Menu_AppendItem(menu, text, null, icon);
-            if (!string.IsNullOrWhiteSpace(tooltip))
-                dou.ToolTipText = tooltip;
-
-            ToolStripTextBox te = Menu_AppendTextItem(dou.DropDown, def.Value.ToString(CultureInfo.InvariantCulture),
-                (s, e) =>
-                {
-                    switch (e.KeyData)
-                    {
-                        case Keys.Enter:
-                            SetDouble(s, def, text, recom);//输入回车进行运算
-                            break;
-                        case Keys.Space:
-                            s.CloseEntireMenuStructure();//输入空格和回车时关闭菜单栏
-                            break;
-                    }
-                },
-                (sender, s) =>
-                    sender.TextBoxItem.ForeColor = double.TryParse(s, out double _) ? SystemColors.WindowText : Color.Red
-                , false);
-            te.VisibleChanged += (s, e) => SetDouble((GH_MenuTextBox)s, def, text, recom);
-            te.ToolTipText = "按下回车确定输入并计算，\r\n按下空格关闭输入框";
-            return dou;
-        }
-        /// <summary>
-        /// 将输入的数值赋给def
-        /// </summary>
-        /// <param name="s">文本框控件</param>
-        /// <param name="def">被赋值的对象</param>
-        /// <param name="text">对象的显示文本</param>
-        /// <param name="recom">是否重计算</param>
-        private void SetDouble(GH_MenuTextBox s, GH_Number def, string text, bool recom = false)
-        {
-            if (double.TryParse(s.Text, out double d))
-            {
-                if (def.Value == d) return;
-                RecordUndoEvent($"设置{text}");
-                def.Value = d;
-                if (recom)
-                    ExpireSolution(true);
-                else
-                    ExpirePreview(true);
-            }
-            else
-                s.Text = def.Value.ToString(CultureInfo.InvariantCulture);
-        }
+            => dou = new MDoubleMenuItem(this, menu, text, dou.Def, tooltip, icon, recom);
 
         /// <summary>
         /// 绘制设置色彩菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
         /// <param name="text">项名称</param>
-        /// <param name="def">预设值及要被修改的值</param>
-        /// <param name="tooltip">提示</param>
+        /// <param name="col">设置好的菜单项</param>
+        /// <param name="tooltip">提示文本</param>
+        /// <param name="icon"></param>
         /// <param name="recom">重计算？否则仅过期预览</param>
-        /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Color(ToolStripDropDown menu, string text, GH_Colour def, string tooltip = null, bool recom = false)
-        {
-            Color c = def.Value;
-            ToolStripMenuItem col = Menu_AppendItem(menu, text, null, c.ToSprite(20, 20));
-            if (!string.IsNullOrWhiteSpace(tooltip))
-                col.ToolTipText = tooltip;
-            Menu_AppendColourPicker(col.DropDown, c,
-                (sender, e) =>
-                {
-                    RecordUndoEvent($"设置{text}");
-                    def.Value = e.Colour;
-                    col.Image = e.Colour.ToSprite(20, 20);
-                    if (recom)
+        public void Menu_Color(ToolStripDropDown menu, string text, ref MColorMenuItem col, string tooltip = null,
+            Image icon = null, bool recom = false)
+            => col = new MColorMenuItem(this, menu, text, col.Def, tooltip, icon, recom);
 
-                        ExpireSolution(false);
-                    else
-                        ExpirePreview(false);
-                });
-            return col;
-        }
         /// <summary>
         /// 绘制设置渐变菜单项
         /// </summary>
         /// <param name="menu">所在菜单</param>
         /// <param name="text">项名称</param>
-        /// <param name="def">预设值及要被修改的值</param>
+        /// <param name="gra">要设置的菜单项字段，记得要在电池初始化的时候给字段赋初始值</param>
         /// <param name="tooltip">提示</param>
         /// <param name="recom">重计算？否则仅过期预览</param>
         /// <returns>设置好的菜单项</returns>
-        public ToolStripMenuItem Menu_Gradient(ToolStripDropDown menu, string text, GH_Gradient def, GH_Boolean rev, string tooltip = null, bool recom = false)
-        {
-            ToolStripMenuItem gradient = Menu_AppendItem(menu, text);
-            gradient.Image = LTResource.Gradient_20x20;
-            if (!string.IsNullOrWhiteSpace(tooltip))
-                gradient.ToolTipText = tooltip;
-            if (gradient.DropDown is ToolStripDropDownMenu downMenu)
-                downMenu.ShowImageMargin = false;
-            List<GH_Gradient> gradientPresets = GH_GradientControl.GradientPresets.ToArray().ToList();
-            //把默认值插入为第一个
-            gradientPresets.Insert(0, def);
-            void GradientPresetClicked(object s, MouseEventArgs e)
-            {
-                MGradientMenuItem GradientMenuItem = (MGradientMenuItem)s;
-                RecordUndoEvent($"设置{text}");
-                //删除旧的
-                for (int i = def.GripCount - 1; i >= 0; i--)
-                    def.RemoveGrip(i);
-                //添加新的
-                for (int i = 0; i < GradientMenuItem.Gradient.GripCount; i++)
-                    def.AddGrip(GradientMenuItem.Gradient[i]);
-
-                if (recom)
-                    ExpireSolution(true);
-                else
-                    ExpirePreview(true);
-            }//创建点击事件 本地方法
-            //把渐变都添加到菜单中
-            foreach (GH_Gradient t in gradientPresets)
-                gradient.DropDownItems.Add(new MGradientMenuItem(t, GradientPresetClicked));
-            //插入提示文本
-            gradient.DropDownItems[0].ToolTipText = "当前渐变";
-
-            #region 反转渐变
-            //去除 渐变项文本中的(&)
-            var t0 = text.IndexOf("(&", StringComparison.Ordinal);
-            var t1 = t0 < 0 ? text : text.Substring(0, t0);
-            ToolStripMenuItem m = Menu_AppendItem(menu, $"反转{t1}(&R)",
-                delegate
-                {
-                    rev.Value = !rev.Value;
-                    if (recom)
-                        ExpireSolution(true);
-                    else
-                        ExpirePreview(true);
-                });
-            m.ToolTipText = "仅反转渐变的映射效果，不修改渐变数据";
-            m.Checked = rev.Value;
-            #endregion
-            return gradient;
-        }
+        public void Menu_Gradient(ToolStripDropDown menu, string text,ref MGradientMenuItem gra, string tooltip = null,
+            Image icon = null, bool recom = false)
+            => gra = new MGradientMenuItem(this, menu, text, gra.Def, gra.Rev, tooltip, icon, recom);
         #endregion
         //todo 把那些数据 字段 替换成这些函数
         #region GetData
