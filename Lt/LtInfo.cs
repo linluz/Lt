@@ -44,8 +44,8 @@ namespace Lt
         internal const string LTCE = "{1B1038DD-7DEF-4045-B48E-513F00A45E76}";
         internal const string LTCF_Osb = "8dd68005-d905-4990-a802-cfd30413f836";
         internal const string LTCF = "{01AF0FEC-0FFC-4725-9643-F0E568CC6761}";
-        internal const string LTSA = "525ba474-eb6b-43f9-a8c4-b9594f4b33cf";
-
+        internal const string LTRA = "525ba474-eb6b-43f9-a8c4-b9594f4b33cf";
+        internal const string LTRW = "{830EE783-C3CB-4ED9-A7D2-F50503E617E7}";
         //internal const string 
     }
 }

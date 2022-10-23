@@ -17,6 +17,7 @@ using Rhino.Geometry.Intersect;
 using Lt.Majas;
 using Grasshopper.GUI.Gradient;
 using Rhino.Display;
+using Grasshopper.Kernel.Special;
 
 namespace Lt.Analysis
 {
@@ -788,12 +789,12 @@ namespace Lt.Analysis
     /// Contour Flood Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
-    public class LTSA : GradientComponent
+    public class LTRA : GradientComponent
     {
-        public LTSA() : base("山路坡度分析", "LTSA",
+        public LTRA() : base("山路坡度分析", "LTRA",
             "分析山路坡度并按角度赋予其对应色彩",
             "分析",
-            ID.LTSA, 3, LTResource.山路坡度分析)
+            ID.LTRA, 3, LTResource.山路坡度分析)
         {
             Gradient = Ty.Gradient0.Duplicate();
             ReCom = GI = true;
@@ -845,7 +846,7 @@ namespace Lt.Analysis
             for (int i = 0; i < v.Length; i++)
                 v[i].Unitize();
             //获取方向向量，计算角度,并保证是正的
-            var a = v.Select(t => Math.Asin(t.Z < 0 ? -t.Z : t.Z) * 57.29).ToArray();
+            var a = v.Select(t => t.向量转坡度()).ToArray();
 
             DA.SetDataList(0, ll);
             DA.SetDataList(1, a);
@@ -902,13 +903,13 @@ namespace Lt.Analysis
             }
         }
         public override void CreateAttributes()
-            => m_attributes = new LTSA_Attributes(this);
+            => m_attributes = new LTRA_Attributes(this);
 
         protected List<List<GH_Line>> L = new List<List<GH_Line>>(5);
 
         protected List<List<Color>> C = new List<List<Color>>(5);
 
-        protected Interval A0 = new Interval(0, 90);
+        protected static readonly Interval A0 = new Interval(0, 90);
         /// <summary>
         /// 渐变是否自适应角度范围，否则为0-90度
         /// </summary>
@@ -926,19 +927,125 @@ namespace Lt.Analysis
     /// <summary>
     /// 山路坡度分析_属性
     /// </summary>
-    public class LTSA_Attributes : GH_ComponentAttributes
+    public class LTRA_Attributes : GH_ComponentAttributes
     {
-        public LTSA_Attributes(IGH_Component component) : base(component) { }
+        public LTRA_Attributes(IGH_Component component) : base(component) { }
 
         public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
         {
-            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTSA j)
+            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTRA j)
             {
                 j.GI = !j.GI;
                 j.ExpireSolution(true);
             }
 
             return GH_ObjectResponse.Handled;
+        }
+    }
+    /// <summary>
+    /// 实时山路坡度反馈
+    /// </summary>
+    // ReSharper disable once UnusedMember.Global
+    //bug 电池无显示 预计是GradientComponent导致的
+    public class LTRW : GradientComponent
+    {
+        protected LTRW() : base("实时山路坡度反馈", "LTRW",
+            "实时反馈所绘制的山路坡度是否合理，\r\n不合理的区域用提示圆标注出来。" +
+            "\r\n注意:绘制需要在“road”图层top视图内。双击本电池图标可自动建立此图层并设为当前",
+            "分析",
+            ID.LTRW, 3, LTResource.实时山路绘制反馈)
+        {
+            Gradient = Ty.Gradient0.Duplicate();
+            gradientH = GH_GradientControl.GradientPresets[1].Duplicate();
+            ReCom = GI = true;
+        }
+        protected override void AddParameter(ParamManager pm)
+        {
+            pm.AddIP(ParT.Mesh, "地形", "M", "山地地形网格", ParamTrait.Item | ParamTrait.OnlyOne);
+            pm.AddIP(ParT.Integer, "重建精度", "E", "道路中线细分重建精度(米/一个点)", ParamTrait.Item | ParamTrait.OnlyOne, def: 2);
+            pm.AddIP(ParT.Number, "坡度倒数", "P", "坡度倒数，用来筛选不合理坡度", ParamTrait.Item | ParamTrait.OnlyOne, def: 2);
+            pm.AddIP(ParT.Number, "提示半径", "R", "提示过陡山路的圆形大小", ParamTrait.Item | ParamTrait.OnlyOne, def: 5);
+
+            pm.AddOP(ParT.Curve, "山路", "R", "被分析的山路线段", ParamTrait.Tree);
+            pm.AddOP(ParT.Colour, "色彩", "C", "根据坡度赋予线段的颜色", ParamTrait.Tree);
+            pm.AddOP(ParT.Curve, "提示圆", "W", "提示过陡路段的圆形", ParamTrait.List);
+        }
+        //todo  将计算好的数据 和此时的哈希 作为插件数据写回到曲线中，再次读取的时候判断有无数据 哈希是否一致来决定是否重算
+        protected override void SolveInstance(IGH_DataAccess DA)
+        {
+            //todo 等能显示了再取消注释
+            //Mesh m = new Mesh();
+            //int e = 0;
+            //double p = 0;
+            //double r = 0;
+            //if (!DA.GetData(0, ref m)
+            //    || !m.IsValid
+            //    || !DA.GetData(1, ref e)
+            //    || e <= 0
+            //    || !DA.GetData(2, ref p)
+            //    || p <= 0
+            //    || !DA.GetData(3, ref r)
+            //    || r <= 0)
+            //    return;
+            //if (L < 0)
+            //{
+            //    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "road图层不存在。可双击本电池图标来建立，并设为当前");
+            //    return;
+            //}
+
+            //var pa = Math.Tan(1 / p);//计算坡度上限
+
+            //var ma = new[] { m };
+            ////获取山路投影后的重建线段
+            //var ll = RhinoDoc.ActiveDoc.Objects.GetObjectList(new ObjectEnumeratorSettings
+            //{ LayerIndexFilter = L, ObjectTypeFilter = ObjectType.Curve }) //按图层 和按曲线类型来获取
+            //    .Select(t => (Curve)t.Geometry.Duplicate()) //备份一份并转换成曲线
+            //    .Select(t =>
+            //        t.DivideByCount((int)Math.Round(t.GetLength() / e), true) //曲线按精度细分出t值
+            //            .Select(t.PointAt)) //t值转点
+            //                                //点投影到网格
+            //    .Select(t => Intersection.ProjectPointsToMeshes(ma, t, Vector3d.ZAxis, DocumentTolerance()))
+            //    .Select(t => new Polyline(t).GetSegments()).ToArray(); //投影好的点转多段线，并获取线段
+            //                                                           //todo 代码debug后 替换成这句
+            //                                                           // var A1 = GI ? new Interval(0, pa) : A0;
+
+            //var al = ll.Select(t =>
+            //        t.Select(t0 =>
+            //            {
+            //                Vector3d v = t0.Direction;
+            //                v.Unitize();
+            //                return v;
+            //            }) //直线转对应向量
+            //            .Select(t0 => t0.向量转坡度()) //向量转坡度(度)
+            //);
+
+            //var cl = al.Select(t =>
+            //{
+            //    var ta = t as double[] ?? t.ToArray();
+            //    var a1 = GI ? ta.ToInterval() : A0;
+            //    return ta.Select(t0 => Dou2Col(a1, t0)).ToArray();
+            //}).ToArray();
+            ////todo 提示圆的代码
+            //DA.SetDataTree(0, ll.Select(t => t.Select(t0 => new GH_Line(t0))).ToGhStructure());
+            //DA.SetDataTree(1, cl.Select(t => t.Select(t0 => new GH_Colour(t0))).ToGhStructure());
+
+        }
+        //todo 右键坡度渐变  右键高程渐变 提示圆尺寸 坡度范围
+        private static int L => RhinoDoc.ActiveDoc.Layers.Find("road", true);
+        protected static readonly Interval A0 = new Interval(0, 90);
+        private GH_Gradient gradientH;
+        /// <summary>
+        /// 渐变是否自适应角度范围，否则为0-90度
+        /// </summary>
+        private bool _gi;
+        internal bool GI
+        {
+            get => _gi;
+            set
+            {
+                Message = value ? "0-上限" : "0-90º";
+                _gi = value;
+            }
         }
     }
 }
