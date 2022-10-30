@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
@@ -361,7 +362,7 @@ namespace Lt.Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
     public sealed class LTVL : AComponent
-    {//todo 增加布尔右键 显示障碍物，其下级菜单增加障碍物色彩
+    {
         public LTVL() : base("视线分析", "LTVL",
             "分析在山地某处的可见范围,cpu线程数大于1时自动调用多核计算",
             "分析",
@@ -373,11 +374,14 @@ namespace Lt.Analysis
             ColorV = new MColorMenuItem(this, Color.FromArgb(0, 207, 182), "可见点色彩(&C)");
             SizeV = new MDoubleMenuItem(this, 4, "可见点尺寸(&S)");
             EyeHight = new MDoubleMenuItem(this, 1.5, "眼高（单位米）(&E)", true);
+            Ov = new MBooleanMenuItem(this, true, "障碍物", mf: m => m.Def ? "显示障碍物" : "");
+            Oc = new MColorMenuItem(this, Color.FromArgb(64, 0, 0, 0), "障碍物色彩");
+            SolutionExpired += (s,e)=> _mesh0=null; 
         }
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Mesh, "地形", "Mt", "要进行坡度分析的山地地形网格");
-            pm.AddIP(ParT.Mesh, "障碍物", "O", "（可选）阻挡视线的障碍物体，", ParamTrait.List | ParamTrait.Optional);
+            pm.AddIP(ParT.Brep, "障碍物", "O", "（可选）阻挡视线的障碍物体，", ParamTrait.List | ParamTrait.Optional);
             pm.AddIP(ParT.Point, "观察点", "P", "观察者所在的点位置（可不在网格上），支持多点观察", ParamTrait.List);
             pm.AddIP(ParT.Integer, "精度", "A", "分析精度(单位：米)，即分析点阵内的间距");
 
@@ -389,7 +393,7 @@ namespace Lt.Analysis
         {
 
             Mesh tm = new Mesh();
-            List<Mesh> o = new List<Mesh>(3);
+            List<Brep> o = new List<Brep>(3);
             List<Point3d> pl = new List<Point3d>();
             int a = 0;
             if (!DA.GetData(0, ref tm) && !tm.IsValid
@@ -397,7 +401,10 @@ namespace Lt.Analysis
                 || !DA.GetData(3, ref a))
                 return;
             DA.GetDataList(1, o);
-
+            var om = o.Select
+            (t =>
+                Mesh.CreateFromBrep(t).Aggregate(new Mesh(), (c, t0) => c.AppendMesh(t0))
+            ).ToArray();
             Point3d[] pt, grid;
 
             //制作网格上用于测量的点阵
@@ -436,18 +443,7 @@ namespace Lt.Analysis
                     pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
                 //剔除被障碍物遮挡
                 grid = g0.Where(t =>
-                    pt.Any(t0 =>
-                        o.All(t1 =>
-                        {
-                            var ml = Intersection.MeshLine(t1, new Line(t0, t), out _);
-                            switch (ml.Length)
-                            {
-                                case 0: return true;
-                                case 1: return ml[0] == t;
-                                default: return false;
-                            }
-                        })
-                    )
+                    pt.Any(t0 => om.All(t1 => OLineOverlap(t1, t0, t)))
                 ).ToArray();
             }
             else
@@ -465,25 +461,30 @@ namespace Lt.Analysis
                     pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
                 //剔除被障碍物遮挡
                 grid = g0.Where(t =>
-                    pt.Any(t0 =>
-                        o.All(t1 =>
-                        {
-                            var ml = Intersection.MeshLine(t1, new Line(t0, t), out _);
-                            switch (ml.Length)
-                            {
-                                case 0: return true;
-                                case 1: return ml[0] == t;
-                                default: return false;
-                            }
-                        })
-                    )
+                    pt.Any(t0 => om.All(t1 => OLineOverlap(t1, t0, t)))
                 ).ToArray();
             }
 
             DA.SetDataList(0, pt);
             DA.SetDataList(1, grid);
         }
-
+        /// <summary>
+        /// 障碍物与直线的重叠情况
+        /// </summary>
+        /// <param name="o">障碍物</param>
+        /// <param name="s">直线起点</param>
+        /// <param name="t">直线终点</param>
+        /// <returns>true为重叠，否则不重叠，（重叠为点则不重叠）</returns>
+        private static bool OLineOverlap(Mesh o, Point3d s, Point3d t)
+        {
+            var ml = Intersection.MeshLine(o, new Line(s, t), out _);
+            switch (ml.Length)
+            {
+                case 0: return true;
+                case 1: return ml[0] == t;
+                default: return false;
+            }
+        }
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
             Menu_Color(menu, ref ColorO);
@@ -491,43 +492,93 @@ namespace Lt.Analysis
             Menu_Color(menu, ref ColorV);
             Menu_Double(menu, ref SizeV, icon: LTResource.PointStyle_20x20);
             Menu_Double(menu, ref EyeHight, "人眼高度", icon: LTResource.EyeHight_20x20);
+            Menu_Boolean(menu,ref Ov,"控制是否显示障碍物",click: delegate
+            {
+                Ov.Item.Checked = Ov.Def;
+            });
+
+            Menu_Color(Ov.Item.DropDown,ref Oc);
+          
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            if (Hidden || !IsPreviewCapable || Locked || args.Document.PreviewMode == GH_PreviewMode.Shaded) return; //电池隐藏或不可预览时跳过
+            if (Hidden || !IsPreviewCapable || Locked) return; //电池隐藏或不可预览时跳过
 
-            args.Viewport.GetFrustumNearPlane(out Plane worldXY);
-            foreach (var t in GetOutByItem<GH_Point>(0))
-                args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeO.Def), ColorO.Def, args.DefaultCurveThickness);
+            if (args.Document.PreviewMode != GH_PreviewMode.Shaded)
+            {
+                args.Viewport.GetFrustumNearPlane(out Plane worldXY);
+                foreach (var t in GetOutByItem<GH_Point>(0))
+                    args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeO.Def), ColorO.Def, args.DefaultCurveThickness);
 
-            foreach (var t in GetOutByItem<GH_Point>(1))
-                args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def), ColorV.Def, args.DefaultCurveThickness);
+                var ccc = Attributes.Selected ? args.WireColour_Selected : ColorV.Def;
+                if (Paral)
+                {
+                    Parallel.ForEach(GetOutByItem<GH_Point>(1), t =>
+                    {
+                        args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def),
+                            ccc, args.DefaultCurveThickness);
+                    });
+                }
+                else
+                    foreach (var t in GetOutByItem<GH_Point>(1))
+                        args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def),
+                            ccc, args.DefaultCurveThickness);
+            }
+            if (!Ov.Def) return;
+            //绘制障碍物
+            GH_PreviewWireArgs pwa = ToPreviewWireArgs(args, Color.FromArgb(Oc.Def.R, Oc.Def.B, Oc.Def.G));
+            foreach (var o in GetIntByItem<GH_Brep>(1))
+                o.DrawViewportWires(pwa);
         }
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (Hidden || !IsPreviewCapable || Locked || !args.Display.SupportsShading) return;
-            MeshO = new Mesh();
-            foreach (Mesh t in GetOutByItem<GH_Point>(0).Select(t
-                         => Mesh.CreateFromSphere(new Sphere(t.Value, SizeO.Def), 60, 30)))
-                MeshO.Append(t);
-            if (MeshO.VertexColors.Count == 0 || MeshO.VertexColors[0] != ColorO.Def)
-                MeshO.VertexColors.CreateMonotoneMesh(ColorO.Def);
-            args.Display.DrawMeshFalseColors(MeshO);
+            if (Mesh0.VertexColors.Count == 0 || Mesh0.VertexColors[0] != ColorO.Def)
+                Mesh0.VertexColors.CreateMonotoneMesh(ColorO.Def);
+            args.Display.DrawMeshFalseColors(Mesh0);//绘制可见点
 
+            if (Ov.Def)//绘制障碍物
+            {
+                GH_PreviewMeshArgs pma = ToPreviewMeshArgs(args, Oc.Def, false);
+                foreach (var o in GetIntByItem<GH_Brep>(1))
+                    o.DrawViewportMeshes(pma);
+            }
 
             DisplayBitmapDrawList displayBitmapDrawList = new DisplayBitmapDrawList
             {
                 MaximumCachedSortLists = 200
             };
-            var grid = GetOutByItem<GH_Point>(1);
-            displayBitmapDrawList.SetPoints(grid.Select(t => t.Value), ColorV.Def);
+
+            displayBitmapDrawList.SetPoints(GetOutByItem<GH_Point>(1).Select(t => t.Value), Attributes.Selected ? args.WireColour_Selected : ColorV.Def);
             args.Display.DrawSprites(new DisplayBitmap(LTResource.FuzzySprite_64x64), displayBitmapDrawList,
                 Convert.ToSingle(SizeV.Def), true);
         }
 
+        public Mesh Mesh0
+        {
+            get
+            {
+                if (_mesh0 == null)
+                    UpdateM();
+                return _mesh0;
+            }
+        }
 
-        private Mesh MeshO = new Mesh();
+        private void UpdateM()
+        {
+            if (Paral)
+                _mesh0 = GetOutByItem<GH_Point>(0).AsParallel() //获取可见点数据
+                    .Select(t =>
+                        Mesh.CreateFromSphere(new Sphere(t.Value, SizeO.Def), 60, 30)) //可见点转网格球
+                    .Aggregate(new Mesh(), (c, t) => c.AppendMesh(t));
+            else
+                _mesh0 = GetOutByItem<GH_Point>(0) //获取可见点数据
+                    .Select(t =>
+                        Mesh.CreateFromSphere(new Sphere(t.Value, SizeO.Def), 60, 30)) //可见点转网格球
+                    .Aggregate(new Mesh(), (c, t) => c.AppendMesh(t));
+        }
+
         /// <summary>
         /// 观察点色彩
         /// </summary>
@@ -540,7 +591,16 @@ namespace Lt.Analysis
         private static MDoubleMenuItem SizeV;
 
         private static MDoubleMenuItem EyeHight;
+        /// <summary>
+        /// 是否显示障碍物
+        /// </summary>
+        private static MBooleanMenuItem Ov;
+        /// <summary>
+        /// 障碍物色彩
+        /// </summary>
+        private static MColorMenuItem Oc;
         private readonly bool Paral;
+        private Mesh _mesh0;
     }
     /// <summary>
     /// 等高线高程分析
@@ -719,7 +779,7 @@ namespace Lt.Analysis
             pm.AddIP(ParT.Integer, "精度", "E", "山路中线的细分重建密度(单位米)");
 
             pm.AddOP(ParT.Line, "路线", "L", "重建后用于分析的直线路线", ParamTrait.List);
-            pm.AddOP(ParT.Number, "坡度", "A", "对应直线段的坡度(度)", ParamTrait.List | ParamTrait.IsAngle);
+            pm.AddOP(ParT.Angle, "坡度", "A", "对应直线段的坡度(弧度)", ParamTrait.List | ParamTrait.UseDegrees);
             pm.AddOP(ParT.Text, "坡度范围", "Rs", "山路直线的坡度范围（既坡高/坡长）");
             pm.AddOP(ParT.Interval, "角度范围", "Ra", "山路直线与水平面所呈角度的范围");
         }
@@ -758,7 +818,7 @@ namespace Lt.Analysis
             DA.SetDataList(0, ll);
             DA.SetDataList(1, a);
 
-            Interval ai = a.ToInterval();//获取角度区间
+            Interval ai = a.Select(t=>t*59.27).ToInterval();//获取角度区间
             double s = Math.Max(Math.Tan(ai.Max), 0.01);//避免分母太大，计算坡度较大值
             string rs = "0 to " + (s > 1 ? $"1/{Math.Round(s, 2)}" : $"{1 / s}/1");//格式化坡度范围
             DA.SetData(2, rs);
@@ -818,7 +878,7 @@ namespace Lt.Analysis
             _c = new Color[l.Count][];
             for (int i = 0; i < l.Count; i++)
             {
-                Interval interval = GI.Def ? itl[i].Value : A0;
+                Interval interval = GI.Def ? itl[i].Value : Ty.A0;
                 _c[i] = l[i].Select(t => Dou2Col(interval, t.Value)).ToArray();
             }
         }
@@ -834,8 +894,6 @@ namespace Lt.Analysis
                 return _c;
             }
         }
-
-        private static readonly Interval A0 = new Interval(0, 90);
         /// <summary>
         /// 渐变是否自适应角度范围，否则为0-90度
         /// </summary>
@@ -876,21 +934,23 @@ namespace Lt.Analysis
             ID.LTRW, 3, LTResource.实时山路绘制反馈)
         {
             Gra.Def = Ty.Gradient0.Duplicate();
-            GraH = new MGradientMenuItem(this, GH_GradientControl.GradientPresets[1].Duplicate(), "高程渐变");
-            GI = new MBooleanMenuItem(this, true, "自适应角度(&A)", mf: m => m.Def ? "自适应" : "0-90º");
             Gra.ReCom = true;
+            GH = new MGradientMenuItem(this, GH_GradientControl.GradientPresets[1].Duplicate(), "高程渐变");
+            GI = new MBooleanMenuItem(this, true, "自适应角度(&A)", mf: m => m.Def ? "自适应" : "0-90º");
+            CR = new MDoubleMenuItem(this, 5, "提示圆半径");
         }
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "地形", "M", "山地地形网格", ParamTrait.Item | ParamTrait.OnlyOne);
-            pm.AddIP(ParT.Integer, "重建精度", "E", "道路中线细分重建精度(米/一个点)", ParamTrait.Item | ParamTrait.OnlyOne, def: 2);
-            pm.AddIP(ParT.Number, "坡度倒数", "P", "坡度倒数，用来筛选不合理坡度", ParamTrait.Item | ParamTrait.OnlyOne, def: 2);
-            pm.AddIP(ParT.Number, "提示半径", "R", "提示过陡山路的圆形大小", ParamTrait.Item | ParamTrait.OnlyOne, def: 5);
-
+            pm.AddIP(ParT.Mesh, "地形", "M", "山地地形网格", ParamTrait.Item | ParamTrait.OneList);
+            pm.AddIP(ParT.Integer, "重建精度", "E", "道路中线细分重建精度(米/一个点)", ParamTrait.OnlyOne, def: 2);
+            pm.AddIP(ParT.Number, "坡度倒数", "P", "坡度倒数，用来筛选不合理坡度", ParamTrait.OnlyOne, def: 2);
+        
             //todo 色彩换成角度，重写烘焙 烘焙出彩色分组的线段
             pm.AddOP(ParT.Curve, "山路", "R", "被分析的山路线段", ParamTrait.Tree);
+            //todo 没问题后 删除此端
             pm.AddOP(ParT.Colour, "色彩", "C", "根据坡度赋予线段的颜色", ParamTrait.Tree);
             pm.AddOP(ParT.Curve, "提示圆", "W", "提示过陡路段的圆形", ParamTrait.List);
+
         }
 
         //todo  将计算好的数据 和此时的哈希 作为插件数据写回到曲线中，再次读取的时候判断有无数据 哈希是否一致来决定是否重算
@@ -899,17 +959,14 @@ namespace Lt.Analysis
             Mesh m = new Mesh();
             int e = 0;
             double p = 0;
-            double r = 0;
             if (!DA.GetData(0, ref m)
                 || !m.IsValid
                 || !DA.GetData(1, ref e)
                 || e <= 0
                 || !DA.GetData(2, ref p)
-                || p <= 0
-                || !DA.GetData(3, ref r)
-                || r <= 0)
+                || p<= 0)
                 return;
-            if (L < 0)
+            if (Ty.L < 0)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "road图层不存在。可双击本电池图标来建立，并设为当前");
                 return;
@@ -920,7 +977,7 @@ namespace Lt.Analysis
             var ma = new[] { m };
             //获取山路投影后的重建线段
             var ll = RhinoDoc.ActiveDoc.Objects.GetObjectList(new ObjectEnumeratorSettings
-            { LayerIndexFilter = L, ObjectTypeFilter = ObjectType.Curve }) //按图层 和按曲线类型来获取
+            { LayerIndexFilter = Ty.L, ObjectTypeFilter = ObjectType.Curve }) //按图层 和按曲线类型来获取
                 .Select(t => (Curve)t.Geometry.Duplicate()) //备份一份并转换成曲线
                 .Select(t =>
                     t.DivideByCount((int)Math.Round(t.GetLength() / e), true) //曲线按精度细分出t值
@@ -944,7 +1001,7 @@ namespace Lt.Analysis
             var cl = al.Select(t =>
             {
                 var ta = t as double[] ?? t.ToArray();
-                var a1 = GI.Def ? ta.ToInterval() : A0;
+                var a1 = GI.Def ? ta.ToInterval() : Ty.A0;
                 return ta.Select(t0 => Dou2Col(a1, t0)).ToArray();
             }).ToArray();
             //todo 提示圆的代码
@@ -952,25 +1009,27 @@ namespace Lt.Analysis
             DA.SetDataTree(1, cl.Select(t => t.Select(t0 => new GH_Colour(t0))).ToGhStructure());
 
         }
-        //todo   右键 提示圆尺寸 
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalComponentMenuItems(menu);
             Menu_Boolean(menu, ref GI, "默认启用，此时渐变色彩范围对应实际的角度范围。\r\n不启用时，范围对应0-90º");
-            Menu_Gradient(menu, ref GraH, "此渐变按高程着色输入网格");
+            Menu_Gradient(menu, ref GH, "此渐变按高程着色输入网格");
+            Menu_Double(menu,ref CR);
         }
         public override void CreateAttributes()
             => m_attributes = new LTRW_Attributes(this);
-
-        private static int L => RhinoDoc.ActiveDoc.Layers.Find("road", true);
-        private static readonly Interval A0 = new Interval(0, 90);
-        private MGradientMenuItem GraH;
+        
+        private MGradientMenuItem GH;
 
         /// <summary>
         /// 渐变是否自适应角度范围，否则为0-90度
         /// </summary>
-        internal MBooleanMenuItem GI;
+        private MBooleanMenuItem GI;
+        /// <summary>
+        /// 提示圆尺寸
+        /// </summary>
+        private MDoubleMenuItem CR;
     }
     /// <summary>
     /// 山路坡度分析_属性
@@ -980,15 +1039,12 @@ namespace Lt.Analysis
         public LTRW_Attributes(IGH_Component component) : base(component) { }
 
         public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
-        {
-            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTRW j)
-            {//TODO 改成建立图层并设其为当前
-                if (j.GI.IsVaild)
-                    j.GI.Item.PerformClick();
-                else
-                {
-                    j.GI.Def = !j.GI.Def;
-                }
+        {//debug
+            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTRW)
+            {
+                if (Ty.L < 0)
+                    RhinoDoc.ActiveDoc.Layers.Add("road", Color.Black);
+                RhinoDoc.ActiveDoc.Layers.SetCurrentLayerIndex(Ty.L, true);
             }
 
             return GH_ObjectResponse.Handled;
