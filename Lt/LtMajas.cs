@@ -19,6 +19,7 @@ using Rhino.DocObjects;
 using Rhino;
 using System.Reflection;
 using Grasshopper.GUI;
+using Rhino.Display;
 
 // ReSharper disable UnusedMember.Global
 namespace Lt.Majas
@@ -70,10 +71,12 @@ namespace Lt.Majas
         /// 将向量转换成坡度
         /// </summary>
         /// <param name="t">向量</param>
-        /// <returns>转换后的角度</returns>
-        public static double 向量转坡度(this Vector3d t) => Math.Asin(t.Z < 0 ? -t.Z : t.Z) * 57.29;
-
-        public static GH_Gradient Gradient0 = new GH_Gradient(
+        /// <returns>转换后的弧度</returns>
+        public static double 向量转坡度(this Vector3d t) => Math.Asin(t.Z < 0 ? -t.Z : t.Z);
+        /// <summary>
+        /// 默认渐变
+        /// </summary>
+        internal static GH_Gradient Gradient0 = new GH_Gradient(
             new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
             new[]
             {
@@ -84,6 +87,14 @@ namespace Lt.Majas
                 Color.FromArgb(234, 126, 0),
                 Color.FromArgb(237, 53, 17)
             });
+        /// <summary>
+        /// road图层的索引，-1为不存在
+        /// </summary>
+        internal static int L => RhinoDoc.ActiveDoc.Layers.Find("road", true);
+       /// <summary>
+       /// 0-90区间
+       /// </summary>
+        internal static readonly Interval A0 = new Interval(0, 90);
     }
 
     public abstract class AComponent : MComponent
@@ -267,9 +278,12 @@ namespace Lt.Majas
                 delegate
                 {
                     Def = !Def;
+                    for (int i = 0; i < Item.DropDownItems.Count; i++)
+                        Item.DropDownItems[i].Visible = Def;
                     Component.Expire(ReCom);
                 }
                 , icon, true, Def);
+            Item.DropDownOpening += (s,e)=> Item.DropDown.Visible = Item.Checked;
             if (!string.IsNullOrWhiteSpace(tooltip))
                 Item.ToolTipText = tooltip;
             if (click != null)
@@ -944,6 +958,50 @@ namespace Lt.Majas
         }
         public List<Func<string>> MessageFl = new List<Func<string>>(3);
         #endregion
+        #region PreviewArgs
+
+        /// <summary>
+        /// 生成网格预览参数
+        /// </summary>
+        /// <param name="args">预览参数</param>
+        /// <param name="dm">预览材质</param>
+        /// <param name="selectd">真时，选中会变色，否则不变</param>
+        /// <returns>生成的网格预览参数</returns>
+        public GH_PreviewMeshArgs ToPreviewMeshArgs(IGH_PreviewArgs args, DisplayMaterial dm, bool selectd = true)
+            => new GH_PreviewMeshArgs(args.Viewport, args.Display,
+                selectd && Attributes.Selected ? args.ShadeMaterial_Selected : dm, args.MeshingParameters);
+        /// <summary>
+        /// 生成网格预览参数
+        /// </summary>
+        ///  <param name="args">预览参数</param>
+        /// <param name="c">预览色彩</param>
+        /// <param name="selectd">真时，选中会变色，否则不变</param>
+        /// <returns>生成的网格预览参数</returns>
+        public GH_PreviewMeshArgs ToPreviewMeshArgs(IGH_PreviewArgs args, Color c, bool selectd = true)
+            => ToPreviewMeshArgs(args, GH_Material.CreateStandardMaterial(c), selectd);
+        /// <summary>
+        /// 生成线条预览参数
+        /// </summary>
+        /// <param name="args">预览参数</param>
+        /// <param name="c">预览色彩</param>
+        /// <param name="selectd">真时，选中会变色，否则不变</param>
+        /// <param name="thickness">线宽</param>
+        /// <returns>生成的线条预览参数</returns>
+        public GH_PreviewWireArgs ToPreviewWireArgs(IGH_PreviewArgs args, Color c, int thickness, bool selectd = true)
+            => new GH_PreviewWireArgs(args.Viewport, args.Display,
+                selectd && Attributes.Selected ? args.WireColour_Selected : c, thickness);
+        /// <summary>
+        /// 生成线条预览参数
+        /// </summary>
+        /// <param name="args">预览参数</param>
+        /// <param name="c">预览色彩</param>
+        /// <param name="selectd">真时，选中会变色，否则不变</param>
+        /// <returns>生成的线条预览参数</returns>
+        public GH_PreviewWireArgs ToPreviewWireArgs(IGH_PreviewArgs args, Color c, bool selectd = true)
+        => new GH_PreviewWireArgs(args.Viewport, args.Display,
+            selectd && Attributes.Selected ? args.WireColour_Selected : c, args.DefaultCurveThickness);
+        #endregion
+
 
         public void Expire(bool recom)
         {
@@ -1131,7 +1189,10 @@ namespace Lt.Majas
                 ip.Optional = t.HasFlag(ParamTrait.Optional);
                 if (t.HasFlag(ParamTrait.IsAngle))
                     if (ip is Param_Number pn)
+                    {
                         pn.AngleParameter = true;
+                        pn.UseDegrees = t.HasFlag(ParamTrait.UseDegrees);
+                    }
                     else
                         throw new ArgumentOutOfRangeException(nameof(t), $"{nameof(ParamTrait.IsAngle)}只能用于【数值】参数端");
                 ip.DataMapping = Trait2DataMap(t);
@@ -1303,14 +1364,15 @@ namespace Lt.Majas
             Optional = 1 << 5,//此参数端为可选，此时勿输入不会被报错
             //NamedList = 1 << 6,//此参数端有已命名项，仅当【整数】参数端时有效
             IsAngle = 1 << 7,//此参数端为角度参数端，仅当其为【数值】参数端时有效
-            Simplify = 1 << 8,//简化参数路径
-            Reverse = 1 << 9,//反转数据数序
-            Flatten = 1 << 10,//摊平，不能与下同时存在，否则只执行摊平
-            Graft = 1 << 11,//升枝，不能与上同时存在
+            UseDegrees = 1 << 8,//使用角度
+            Simplify = 1 << 9,//简化参数路径
+            Reverse = 1 << 10,//反转数据数序
+            Flatten = 1 << 11,//摊平，不能与下同时存在，否则只执行摊平
+            Graft = 1 << 12,//升枝，不能与上同时存在
             //todo 下三需要实现
-            OneItem = 1 << 12,//每个列表仅接受一项
-            OneList = 1 << 13,//仅接受一列
-            OnlyOne = OneItem | OneList// 仅接受一个数据
+            OneItem = 1 << 13,//每个列表仅接受一项
+            OneList = 1 << 14,//仅接受一列
+            OnlyOne = OneItem | OneList| Item// 仅接受一个数据
         }
     }
 
@@ -1336,6 +1398,18 @@ namespace Lt.Majas
     public sealed class ArgDefException : Exception { }
     public static class Majas_Ex
     {
+        /// <summary>
+        /// 向网格中添加网格，与原生的Append()功能一致，只是方便Aggregate()方法使用
+        /// </summary>
+        /// <param name="m">被添加的网格</param>
+        /// <param name="t">要添加的网格</param>
+        /// <returns>添加后的网格</returns>
+        public static Mesh AppendMesh(this Mesh m, Mesh t)
+        {
+            m.Append(t);
+            return m;
+        }
+
         public static Param_Integer AddNamedValueL(this Param_Integer a, IEnumerable<string> b)
         {
             StringBuilder s = new StringBuilder();
@@ -1387,7 +1461,6 @@ namespace Lt.Majas
                 ls.AppendRange(t);
             return ls;
         }
-
         public static Interval ToInterval(this IEnumerable<double> l)
         {
             using (IEnumerator<double> e = l.GetEnumerator())
