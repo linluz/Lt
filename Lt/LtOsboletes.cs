@@ -413,7 +413,7 @@ namespace Lt.Osbolete
             pm.AddIP(ParT.Integer, "精度", "E", "山路中线的细分重建密度(单位米)");
 
             pm.AddOP(ParT.Line, "路线", "L", "重建后用于分析的直线路线", ParamTrait.List);
-            pm.AddOP(ParT.Number, "坡度", "A", "对应直线段的坡度(度)", ParamTrait.List | ParamTrait.IsAngle);
+            pm.AddOP(ParT.Angle, "坡度", "A", "对应直线段的坡度(度)", ParamTrait.List);
             pm.AddOP(ParT.Text, "坡度范围", "Rs", "山路直线的坡度范围（既坡高/坡长）");
             pm.AddOP(ParT.Interval, "角度范围", "Ra", "山路直线与水平面所呈角度的范围");
         }
