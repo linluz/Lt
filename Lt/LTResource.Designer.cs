@@ -123,6 +123,16 @@ namespace Lt {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
+        internal static System.Drawing.Bitmap Modifier_Degrees_16x16 {
+            get {
+                object obj = ResourceManager.GetObject("Modifier_Degrees_16x16", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
         internal static System.Drawing.Bitmap PointStyle_20x20 {
             get {
                 object obj = ResourceManager.GetObject("PointStyle_20x20", resourceCulture);
