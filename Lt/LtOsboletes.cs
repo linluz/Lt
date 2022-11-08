@@ -15,7 +15,7 @@ namespace Lt.Osbolete
         { }
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTFT : AOComponent
+    public sealed class LTFT : AOComponent
     {
         public LTFT() :
             base("地形网格淹没分析", "LTFT", "分析", ID.LTMF_Osb, nameof(LTMF), LTResource.山体淹没分析)
@@ -32,7 +32,7 @@ namespace Lt.Osbolete
     }
 
     // ReSharper disable once UnusedMember.Global
-    public class LTTG : AOComponent
+    public sealed class LTTG : AOComponent
     {
         public LTTG() : base("坡度分析", "LTTG", "分析", ID.LTMG_Osb, nameof(LTMG), LTResource.山体坡度分析)
         { }
@@ -46,7 +46,7 @@ namespace Lt.Osbolete
     }
 
     // ReSharper disable once UnusedMember.Global
-    public class LTTE : AOComponent
+    public sealed class LTTE : AOComponent
     {
         public LTTE() : base("高程分析", "LTTE", "分析", ID.LTME_Osb, nameof(LTME), LTResource.山体高程分析)
         { }
@@ -60,7 +60,7 @@ namespace Lt.Osbolete
     }
 
     // ReSharper disable once UnusedMember.Global
-    public class LTVL_Osb : AOComponent
+    public sealed class LTVL_Osb : AOComponent
     {
         public LTVL_Osb() : base("视线分析", "LTVL", "分析", ID.LTVL_Osb, nameof(LTVL), LTResource.视线分析)
         { }
@@ -77,7 +77,7 @@ namespace Lt.Osbolete
     }
 
     // ReSharper disable once UnusedMember.Global
-    public class LTCE_Osb : AOComponent
+    public sealed class LTCE_Osb : AOComponent
     {
         public LTCE_Osb() : base("等高线高程分析", "LTCE", "分析", ID.LTCE_Osb, nameof(LTCE), LTResource.等高线高程分析)
         { }
@@ -91,7 +91,7 @@ namespace Lt.Osbolete
     }
 
     // ReSharper disable once UnusedMember.Global
-    public class LTCF_Osb : AOComponent
+    public sealed class LTCF_Osb : AOComponent
     {
         public LTCF_Osb() : base("等高线淹没分析", "LTCE", "分析", ID.LTCF_Osb, nameof(LTCF), LTResource.等高线淹没分析) { }
         protected override void AddParameter(ParamManager pm)
@@ -140,7 +140,7 @@ namespace Lt.Osbolete
         protected MGradientMenuItem Gra;
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTMF_Osb2 : GradientComponent_Osb
+    public sealed class LTMF_Osb2 : GradientComponent_Osb
     {
         public LTMF_Osb2() : base(
             "淹没分析(网格)", "LTMF",
@@ -191,7 +191,7 @@ namespace Lt.Osbolete
         private MColorMenuItem DownColor;
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTMD_Osb2 : AOComponent
+    public sealed class LTMD_Osb2 : AOComponent
     {
         public LTMD_Osb2()
             : base("坡向分析(网格)", "LTMD",
@@ -242,7 +242,7 @@ namespace Lt.Osbolete
         private MBooleanMenuItem Shade;
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTMG_Osb2 : GradientComponent_Osb
+    public sealed class LTMG_Osb2 : GradientComponent_Osb
     {
         public LTMG_Osb2() : base("坡度分析(网格)", "LTMG",
             "分析",
@@ -260,7 +260,7 @@ namespace Lt.Osbolete
         }
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTME_Osb2 : GradientComponent_Osb
+    public sealed class LTME_Osb2 : GradientComponent_Osb
     {
         public LTME_Osb2() : base("高程分析(网格)", "LTME",
             "分析",
@@ -278,7 +278,7 @@ namespace Lt.Osbolete
         }
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTVL_Osb2 : AOComponent
+    public sealed class LTVL_Osb2 : AOComponent
     {
         public LTVL_Osb2() : base("视线分析", "LTVL",
             "分析",
@@ -336,7 +336,7 @@ namespace Lt.Osbolete
         private static MDoubleMenuItem EyeHight ;
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTCE_Osb2 : GradientComponent_Osb
+    public sealed class LTCE_Osb2 : GradientComponent_Osb
     {
         public LTCE_Osb2() : base("高程分析(等高线)", "LTCE",
             "分析",
@@ -354,7 +354,7 @@ namespace Lt.Osbolete
         }
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTCF_Osb2 : AOComponent
+    public sealed class LTCF_Osb2 : AOComponent
     {
         public LTCF_Osb2() : base("淹没分析(等高线)", "LTCF",
             "分析",
@@ -397,7 +397,7 @@ namespace Lt.Osbolete
         private MColorMenuItem DownColor;
     }
     // ReSharper disable once UnusedMember.Global
-    public class LTSA : GradientComponent_Osb
+    public sealed class LTSA : GradientComponent_Osb
     {
         public LTSA() : base("山路坡度分析", "LTSA",
             "分析",
