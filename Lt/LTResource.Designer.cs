@@ -63,9 +63,29 @@ namespace Lt {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
+        internal static System.Drawing.Bitmap AngleParam_24 {
+            get {
+                object obj = ResourceManager.GetObject("AngleParam_24", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
         internal static System.Drawing.Bitmap CASS方格网法计算土方 {
             get {
                 object obj = ResourceManager.GetObject("CASS方格网法计算土方", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
+        internal static System.Drawing.Bitmap Degrees_16 {
+            get {
+                object obj = ResourceManager.GetObject("Degrees_16", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

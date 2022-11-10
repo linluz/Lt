@@ -22,6 +22,7 @@ using Grasshopper.GUI;
 using Rhino.Display;
 using Grasshopper.Kernel.Expressions;
 using System.Drawing.Drawing2D;
+using Grasshopper.GUI.Canvas;
 
 // ReSharper disable UnusedMember.Global
 namespace Lt.Majas
@@ -106,20 +107,28 @@ namespace Lt.Majas
         /// road图层的索引，-1为不存在
         /// </summary>
         internal static int L => RhinoDoc.ActiveDoc.Layers.Find("road", true);
+
         /// <summary>
         /// 0-90区间
         /// </summary>
-        internal static readonly Interval A0 = new Interval(0, 90);
+        internal static Interval A0(bool usedegrees = true)
+            => new Interval(0, usedegrees ? 90 : Math.PI / 2);
         internal static readonly bool Paral = Environment.ProcessorCount > 1;
     }
 
+    #region AComponent
     public abstract class AComponent : MComponent
     {
         protected AComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
             base(name, nickname, description, "Lt", subCategory, id, exposure, icon)
         { }
     }
-
+    public abstract class ADCComponent : MDCComponent
+    {
+        protected ADCComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
+            base(name, nickname, description, "Lt", subCategory, id, exposure, icon)
+        { }
+    }
     public abstract class GradientComponent : AComponent
     {
         protected GradientComponent(string name, string nickname, string description, string subCategory, string id,
@@ -139,9 +148,7 @@ namespace Lt.Majas
             => Gra.Def.Double2GraColor(it, v, Gra.Rev);
         protected MGradientMenuItem Gra;
     }
-
-
-
+    #endregion
     #endregion
     #region MenuItemClass
     public abstract class MMenuItem<T>
@@ -298,14 +305,44 @@ namespace Lt.Majas
                     Component.Expire(ReCom);
                 }
                 , icon, true, Def);
-            Item.DropDownOpening += (s,e)=> Item.DropDown.Visible = Item.Checked;
             if (!string.IsNullOrWhiteSpace(tooltip))
                 Item.ToolTipText = tooltip;
             if (click != null)
                 Item.Click += click;
             return this;
         }
-
+        /// <summary>
+        /// 设置事件，1点击后菜单项勾选状态与def同步，2打开时子菜单项可见性与勾选状态同步
+        /// </summary>
+        public void SetEvent()
+        {
+            if(SettedEvent)return;
+            SettedEvent = true;
+            Item.DropDownOpened += (s, e) => Item.DropDown.Visible = Item.Checked;
+            Item.Click += (sender, args) => Item.Checked = Def;
+        }
+        /// <summary>
+        /// 实践是否已设置
+        /// </summary>
+        private bool SettedEvent;
+        /// <summary>
+        /// 替换输入输出端的说明文本
+        /// </summary>
+        /// <param name="io">true为输出端，false为输入端</param>
+        /// <param name="pi">索引序号</param>
+        /// <param name="s0">按钮勾选时，被替换的文本，否则相反</param>
+        /// <param name="s1">按钮勾选时，替换为的文本，否则相反</param>
+        public void ReplacePDesc(bool io, string s0, string s1, params int[] pia)
+        {
+            foreach (var pi in pia)
+            {
+                var p = (io ? Component.Params.Output : Component.Params.Input)[pi];
+                string s = p.Description;
+                p.Description = Def
+                    ? s.Replace(s0, s1)
+                    : s.Replace(s1, s0);
+            }
+        }
         public bool IsVaild => IsVaild0;
     }
     public sealed class MIntegerMenuItem : MMenuItem<int>
@@ -644,7 +681,7 @@ namespace Lt.Majas
         public override string Description => "Angles inside this parameter are defined in degrees, not radians.";
 
         public override Bitmap Icon => LTResource.Modifier_Degrees_16x16;
-        public override void Render(Graphics graphics) 
+        public override void Render(Graphics graphics)
             => RenderTagBlankIcon(graphics, RenderSymbol);
         private void RenderSymbol(Graphics graphics, double alpha)
         {
@@ -695,18 +732,18 @@ namespace Lt.Majas
         protected override void OnVolatileDataCollected()
         {
             base.OnVolatileDataCollected();
-            if(UseDegrees)
+            if (UseDegrees)
                 switch (Kind)
                 {
                     case GH_ParamKind.input:
                         foreach (var i in m_data.Branches)
-                        foreach (var j in i)
-                            j.Value *= 0.017453292519943295;
+                            foreach (var j in i)
+                                j.Value *= Majas_Ex.A2R;
                         break;
                     case GH_ParamKind.output:
                         foreach (var i in m_data.Branches)
-                        foreach (var j in i)
-                            j.Value *= 57.295779513082323;
+                            foreach (var j in i)
+                                j.Value *= Majas_Ex.R2A;
                         break;
                     case GH_ParamKind.unknown:
                     case GH_ParamKind.floating:
@@ -762,12 +799,12 @@ namespace Lt.Majas
                 {
                     Description = Description.Replace("radians", "degrees");
                     Description = Description.Replace("Radians", "Degrees");
-                    Description = Description.Replace("弧度", "角度");
+                    Description = Description.Replace("弧度", "度");
                     return;
                 }
                 Description = Description.Replace("degrees", "radians");
                 Description = Description.Replace("Degrees", "Radians");
-                Description = Description.Replace("角度", "弧度");
+                Description = Description.Replace("度", "弧度");
             }
         }
         public override GH_StateTagList StateTags
@@ -784,9 +821,7 @@ namespace Lt.Majas
             }
         }
         public override GH_Exposure Exposure => GH_Exposure.hidden;
-
-        //todo 制作角度图标
-        protected override Bitmap Icon => null;
+        protected override Bitmap Icon => LTResource.AngleParam_24;
         public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalMenuItems(menu);
@@ -802,18 +837,16 @@ namespace Lt.Majas
             if (UseDegrees)
 
                 foreach (var i in m_data.Branches)
-                foreach (var j in i)
-                    j.Value *= 57.295779513082323;
+                    foreach (var j in i)
+                        j.Value *= Majas_Ex.R2A;
             else
                 foreach (var i in m_data.Branches)
-                foreach (var j in i)
-                    j.Value *= 0.017453292519943295;
-            
-            Attributes.GetTopLevel.ExpireLayout();
-            foreach (var p in Recipients)
+                    foreach (var j in i)
+                        j.Value *= Majas_Ex.A2R;
+
+            Attributes.GetTopLevel.ExpireLayout();//过期上级电池的布局，以切换状态图标
+            foreach (var p in Recipients)//过期下游
                 p.ExpireSolution(true);
-            
-            
         }
         protected override ToolStripMenuItem Menu_CustomSingleValueItem()
         {
@@ -879,6 +912,7 @@ namespace Lt.Majas
     }
 
     #endregion
+    #region Component
     public abstract class MComponent : GH_Component
     {
         protected MComponent(string name, string nickname, string description, string category, string subCategory,
@@ -1197,7 +1231,7 @@ namespace Lt.Majas
         public void Menu_Gradient(ToolStripDropDown menu, ref MGradientMenuItem mi, string tooltip = null, Image icon = null)
             => mi.SetMenuItem(menu, tooltip, icon);
         /// <summary>
-        /// 给布尔菜单项设置子设置布尔菜单项
+        /// 给布尔菜单项设置子布尔菜单项
         /// </summary>
         /// <param name="mb">所在布尔菜单项</param>
         /// <param name="mi">要设置的菜单项字段，记得要在电池初始化的时候给字段赋初始值</param>
@@ -1208,7 +1242,7 @@ namespace Lt.Majas
             Image icon = null, EventHandler click = null)
         {
             Menu_Boolean(mb.Item.DropDown, ref mi, tooltip, icon, click);
-            mi.Item.Visible = mb.Def;
+            Menu_BVisibleAndEvent(mb);
         }
         /// <summary>
         /// 给布尔菜单项设置子整数菜单项
@@ -1221,7 +1255,7 @@ namespace Lt.Majas
             Image icon = null)
         {
             Menu_Integer(mb.Item.DropDown, ref mi, tooltip, icon);
-            mi.Item.Visible = mb.Def;
+            Menu_BVisibleAndEvent(mb);
         }
         /// <summary>
         /// 给布尔菜单项设置子数值菜单项
@@ -1233,7 +1267,7 @@ namespace Lt.Majas
         public void Menu_BDouble(MBooleanMenuItem mb, ref MDoubleMenuItem mi, string tooltip = null, Image icon = null)
         {
             Menu_Double(mb.Item.DropDown, ref mi, tooltip, icon);
-            mi.Item.Visible = mb.Def;
+            Menu_BVisibleAndEvent(mb);
         }
         /// <summary>
         /// 给布尔菜单项设置子色彩菜单项
@@ -1245,7 +1279,7 @@ namespace Lt.Majas
         public void Menu_BColor(MBooleanMenuItem mb, ref MColorMenuItem mi, string tooltip = null, Image icon = null)
         {
             Menu_Color(mb.Item.DropDown, ref mi, tooltip, icon);
-            mi.Item.Visible = mb.Def;
+            Menu_BVisibleAndEvent(mb);
         }
         /// <summary>
         /// 给布尔菜单项设置子渐变菜单项
@@ -1258,9 +1292,19 @@ namespace Lt.Majas
             Image icon = null)
         {
             Menu_Gradient(mb.Item.DropDown, ref mi, tooltip, icon);
-            mi.Item.Visible = mb.Def;
+            Menu_BVisibleAndEvent(mb);
         }
+        /// <summary>
+        /// 调整菜单项全部子菜单项的可见性,并设置事件
+        /// </summary>
+        /// <param name="mb">要调整的菜单项</param>
+        private void Menu_BVisibleAndEvent(MBooleanMenuItem mb)
+        {
+            mb.SetEvent();
 
+            foreach (var i in mb.Item.DropDownItems)
+                ((ToolStripItem)i).Visible = mb.Def;
+        }
         #endregion
         #region GetData
         protected List<T> GetIntByItem<T>(int i) where T : IGH_Goo
@@ -1269,9 +1313,54 @@ namespace Lt.Majas
         protected List<List<T>> GetIntByList<T>(int i) where T : IGH_Goo
             => ((GH_Structure<T>)Params.Input[i].VolatileData).Branches.ToList();
         protected List<T> GetOutByItem<T>(int i) where T : IGH_Goo
-            => GetOutByList<T>(i).SelectMany(t => t).ToList();
+            => ((GH_Structure<T>)Params.Output[i].VolatileData).Branches.SelectMany(t => t).ToList();
+        /// <summary>
+        /// 获取指定索引的输出端的数据 使用本函数一定要注意 摊平等操作符会修改数据结构 可能导致和其他配套数据的结构不匹配，引起空值报错
+        /// </summary>
+        /// <typeparam name="T">输出端所含数据的类型</typeparam>
+        /// <param name="i">输出端索引</param>
+        /// <returns>输出端数据</returns>
         protected List<List<T>> GetOutByList<T>(int i) where T : IGH_Goo
             => ((GH_Structure<T>)Params.Output[i].VolatileData).Branches.ToList();
+        protected List<GH_Number> GetIntAngByItem(int i, out bool degrees)
+        {
+            if (Params.Input[i] is Param_Angle pa)
+            {
+                degrees = pa.UseDegrees;
+                return ((GH_Structure<GH_Number>)pa.VolatileData).Branches.SelectMany(t => t).ToList();
+            }
+
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{nameof(GetIntAngByItem)}只能用于获取【角度】输入端的数据，请联系开发者");
+            degrees = false;
+            return null;
+        }
+
+        protected List<List<GH_Number>> GetIntAngByList(int i, out bool degrees)
+        {
+            if (Params.Input[i] is Param_Angle pa)
+            {
+                degrees = pa.UseDegrees;
+                return ((GH_Structure<GH_Number>)pa.VolatileData).Branches.ToList();
+            }
+
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{nameof(GetIntAngByList)}只能用于获取【角度】输入端的数据，请联系开发者");
+            degrees = false;
+            return null;
+        }
+
+        protected List<GH_Number> GetOutAngByItem(int i, out bool degrees)
+        {
+            if (Params.Output[i] is Param_Angle pa)
+            {
+                degrees = pa.UseDegrees;
+                return ((GH_Structure<GH_Number>)pa.VolatileData).Branches.SelectMany(t => t).ToList();
+            }
+
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{nameof(GetOutAngByItem)}只能用于获取【角度】输出端的数据，请联系开发者");
+            degrees = false;
+            return null;
+        }
+
         #endregion
         #region Message
         public void ToMessage()
@@ -1505,7 +1594,6 @@ namespace Lt.Majas
             }
 
             #endregion
-
             #region ParamTrait
             private static IGH_Param SetTrait(IGH_Param ip, ParamTrait t)
             {
@@ -1702,9 +1790,10 @@ namespace Lt.Majas
             Flatten = 1 << 11,//摊平，不能与下同时存在，否则只执行摊平
             Graft = 1 << 12,//升枝，不能与上同时存在
             //todo 下三需要实现
+            //尝试替换 Param<T>的OnVolatileDataCollected来实现
             OneItem = 1 << 13,//每个列表仅接受一项
             OneList = 1 << 14,//仅接受一列
-            OnlyOne = OneItem | OneList| Item// 仅接受一个数据
+            OnlyOne = OneItem | OneList | Item// 仅接受一个数据
         }
     }
 
@@ -1726,6 +1815,42 @@ namespace Lt.Majas
         public string NewName;
     }
 
+    public abstract class MDCComponent : MComponent, IMCom_DoubleClick
+    {
+        protected MDCComponent(string name, string nickname, string description, string category, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
+            base(name, nickname, description, category, subCategory, id, exposure, icon)
+        { }
+        public sealed override void CreateAttributes()
+            => m_attributes = new DoubleClick_Attributes(this);
+        public abstract MBooleanMenuItem DoubleClick { get; }
+    }
+
+    public interface IMCom_DoubleClick
+    {
+        MBooleanMenuItem DoubleClick { get; }
+        void CreateAttributes();
+    }
+    /// <summary>
+    /// 双击切换_属性，对应电池必须实现IMCom_DoubleClick
+    /// </summary>
+    public sealed class DoubleClick_Attributes : GH_ComponentAttributes
+    {
+        public DoubleClick_Attributes(IGH_Component component) : base(component) { }
+
+        public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
+        {
+            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is IMCom_DoubleClick j)
+            {
+                if (j.DoubleClick.IsVaild)
+                    j.DoubleClick.Item.PerformClick();
+                else
+                    j.DoubleClick.Def = !j.DoubleClick.Def;
+            }
+            return GH_ObjectResponse.Handled;
+        }
+    }
+    #endregion
+
     [Serializable]
     public sealed class ArgDefException : Exception { }
 
@@ -1742,14 +1867,14 @@ namespace Lt.Majas
         {
             get
             {
-                if(_value==null|| _value.Equals(default))
+                if (_value == null || _value.Equals(default))
                     UpdateM.Invoke();
                 return _value;
             }
             set => _value = value;
         }
         private T _value;
-        private readonly  Action UpdateM;
+        private readonly Action UpdateM;
         public void Clear() => _value = default;
         public static bool IsValid(Update<T> u)
             => u?.UpdateM != null;
@@ -1814,7 +1939,7 @@ namespace Lt.Majas
         }
 
         public static bool SetDataTree<T>(this IGH_DataAccess da, int paramIndex, IEnumerable<IEnumerable<T>> ll) where T : IGH_Goo
-            => da.SetDataTree(paramIndex,ll.ToGhStructure());
+            => da.SetDataTree(paramIndex, ll.ToGhStructure());
 
         public static GH_Structure<T> ToGhStructure<T>(this IEnumerable<IEnumerable<T>> ll) where T : IGH_Goo
         {
@@ -1822,7 +1947,7 @@ namespace Lt.Majas
             int i = 0;
             foreach (var t in ll)
             {
-                ls.AppendRange(t,new GH_Path(i));
+                ls.AppendRange(t, new GH_Path(i));
                 i++;
             }
             return ls;
@@ -1916,5 +2041,8 @@ namespace Lt.Majas
             return g0;
         }
         #endregion
+
+        public const double R2A = 57.295779513082323;
+        public const double A2R = 0.017453292519943295;
     }
 }
