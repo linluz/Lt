@@ -21,7 +21,6 @@ using Grasshopper.Kernel.Special;
 namespace Lt.Analysis
 {
     //after 给渐变的电池 加色彩标尺
-    //todo 排查所有输出角度的电池 确保输出为弧度 并转换为角度
     /// <summary>
     /// 网格淹没分析
     /// Flooded Terrain
@@ -103,12 +102,12 @@ namespace Lt.Analysis
     /// 网格坡向分析
     /// Slope Direction Analysis
     /// </summary>
-    public sealed class LTMD : AComponent
+    public sealed class LTMD : ADCComponent
     {
         public LTMD()
             : base("坡向分析(网格)", "LTMD",
                 "山坡地形朝向分析,X轴向为东,Y轴向为北" +
-                "\r\n双击电池图标以切换着色模式," +
+                "\r\n双击：切换着色模式," +
                 "\r\n注意：顶点着色会焊接网格顶点，可能导致顶点减少，" +
                 "\r\n面着色会把面的每个顶点都解离出来，可能会导致顶点增加",
                 "分析",
@@ -233,51 +232,28 @@ namespace Lt.Analysis
             //西北、西南
         }
 
-        public override void CreateAttributes()
-        => m_attributes = new LTMD_Attributes(this);
-
         private static readonly double Num1 = Math.Tan(Math.PI / 8);
         private static readonly double Num2 = Math.Tan(Math.PI * 3 / 8);
 
-
-        internal MBooleanMenuItem Shade;
-    }
-    /// <summary>
-    /// 坡向分析_属性
-    /// </summary>
-    public sealed class LTMD_Attributes : GH_ComponentAttributes
-    {
-        public LTMD_Attributes(IGH_Component component) : base(component) { }
-
-        public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
-        {
-            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTMD j)
-            {
-                if (j.Shade.IsVaild)
-                    j.Shade.Item.PerformClick();
-                else
-                {
-                    j.Shade.Def = !j.Shade.Def;
-                }
-            }
-
-            return GH_ObjectResponse.Handled;
-        }
+        private MBooleanMenuItem Shade;
+        public override MBooleanMenuItem DoubleClick => Shade;
     }
     /// <summary>
     /// 网格坡度分析
     /// Terrain Mesh Grade Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
-    public sealed class LTMG : GradientComponent
+    public sealed class LTMG : GradientComponent, IMCom_DoubleClick
     {
         public LTMG() : base("坡度分析(网格)", "LTMG",
-            "山地地形坡度分析",
+            "山地地形坡度分析,\r\n双击：【坡度范围】切换为角度/弧度",
             "分析",
             ID.LTMG, 1, LTResource.山体坡度分析)
         {
             Gra.Def = Ty.Gradient0.Duplicate();
             Gra.ReCom = true;
+            GI = new MBooleanMenuItem(this, true, "自适应范围(&A)", true, mf: m => m.Def ? "自适应" : "0-90°");
+            UD = new MBooleanMenuItem(this, true, "使用角度(&U)", true, mf: m => m.Def ? "角度" : "弧度");
         }
         protected override void AddParameter(ParamManager pm)
         {
@@ -294,22 +270,38 @@ namespace Lt.Analysis
             if (tm.Normals.Count != tm.Vertices.Count)
                 tm.Normals.ComputeNormals();//计算法向
             tm.VertexColors.Clear();//清除色彩
-            var ra = tm.Normals.Select(t => Math.Round(Math.Acos(t.Z) * 57.29, 2)).ToArray();//法向转角度,保留两位小数
 
-            //获取区间
-            Interval ia = ra.ToInterval();
+            double d = UD.Def ? Majas_Ex.R2A : 1;//输出弧度还是角度
+            var ra = tm.Normals.Select(t => Math.Round(Math.Acos(t.Z) * d, 2)).ToArray();//法向转角度,保留两位小数
 
+
+            Interval ia = ra.ToInterval();//获取角度范围
+            Interval ib = GI.Def ? ia : Ty.A0(UD.Def);//着色范围
             //角度转换为色彩并给予网格
-            tm.VertexColors.AppendColors(ra.Select(t => Dou2Col(ia, t)).ToArray());
+            tm.VertexColors.AppendColors(ra.Select(t => Dou2Col(ib, t)).ToArray());
             DA.SetData(0, tm);
             DA.SetData(1, ia);
         }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+        {
+            base.AppendAdditionalComponentMenuItems(menu);
+            Menu_Boolean(menu, ref GI, "默认启用，此时渐变色彩范围对应实际的角度范围。\r\n不启用时，范围对应0-90º");
+            Menu_Boolean(menu, ref UD, "勾选时,【角度】输出端输出度,否则为弧度", LTResource.Degrees_16,
+                (s, e) => UD.ReplacePDesc(true, "（弧度）", "（度）", 1));
+        }
+
+        public override void CreateAttributes()
+            => m_attributes = new DoubleClick_Attributes(this);
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || Hidden || !args.Display.SupportsShading)
                 return; ///跳过非着色模式和，或参数不支持预览
             Ty.Draw1Meshes(0, this, args);
         }
+
+        private MBooleanMenuItem GI;
+        private MBooleanMenuItem UD;
+        public MBooleanMenuItem DoubleClick => UD;
     }
     /// <summary>
     /// 网格高程分析
@@ -501,10 +493,7 @@ namespace Lt.Analysis
             Menu_Color(menu, ref ColorV);
             Menu_Double(menu, ref SizeV, icon: LTResource.PointStyle_20x20);
             Menu_Double(menu, ref EyeHight, "人眼高度", icon: LTResource.EyeHight_20x20);
-            Menu_Boolean(menu, ref Ov, "控制是否显示障碍物", click: delegate
-            {
-                Ov.Item.Checked = Ov.Def;
-            });
+            Menu_Boolean(menu, ref Ov, "控制是否显示障碍物");
             Menu_BColor(Ov, ref Oc);
         }
         public override void DrawViewportWires(IGH_PreviewArgs args)
@@ -602,7 +591,7 @@ namespace Lt.Analysis
     public sealed class LTCE : GradientComponent
     {
         public LTCE() : base("高程分析(等高线)", "LTCE",
-            "分析等高线的高程，并获得其可视化色彩。可直接烘焙出已着色曲线",
+            "分析等高线的高程，并获得其可视化色彩。\r\n烘焙：已着色等高线",
             "分析",
             ID.LTCE, 2, LTResource.等高线高程分析)
         {
@@ -614,7 +603,7 @@ namespace Lt.Analysis
             pm.AddIP(ParT.Curve, "等高线", "C", "待分析的等高线，请自行确保输入的都是水平曲线", ParamTrait.List);
 
             pm.AddOP(ParT.Colour, "色彩", "C", "输入曲线高程的映射色彩", ParamTrait.List);
-            pm.AddOP(ParT.Interval, "范围", "R", "输入高程线的高程范围");
+            pm.AddOP(ParT.Interval, "范围", "R", "输入等高线的高程范围");
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -648,14 +637,11 @@ namespace Lt.Analysis
             var Cur = GetIntByItem<GH_Curve>(0);
             for (var i = 0; i < Cur.Count; i++)
             {
-                GH_Curve c = Cur[i];
-                if (!c.IsValid)
-                    continue;
                 ObjectAttributes oa = att.Duplicate();
                 oa.ColorSource = ObjectColorSource.ColorFromObject;
                 oa.ObjectColor = Col[i].Value;
                 Guid id = Guid.Empty;
-                c.BakeGeometry(doc, oa, ref id);
+                Cur[i].BakeGeometry(doc, oa, ref id);
                 obj_ids.Add(id);
             }
         }
@@ -668,7 +654,7 @@ namespace Lt.Analysis
     public sealed class LTCF : AComponent
     {
         public LTCF() : base("淹没分析(等高线)", "LTCF",
-            "通过等高线数据分析地形的淹没情况。可直接烘焙出已着色曲线",
+            "通过等高线数据分析地形的淹没情况。\r\n烘焙：已着色已群组淹没/未淹曲线",
             "分析",
             ID.LTCF, 2, LTResource.等高线淹没分析)
         {
@@ -713,24 +699,15 @@ namespace Lt.Analysis
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
+
+            bool set = Attributes.GetTopLevel.Selected;
             if (!UpColor.Def.IsEmpty)
-            {
-                foreach (var l0 in GetOutByList<GH_Curve>(0))
-                    foreach (var l1 in l0)
-                    {
-                        bool set = Attributes.GetTopLevel.Selected;
-                        if (l1.IsValid)
-                            args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : UpColor.Def);
-                    }
-            }
-            if (DownColor.Def.IsEmpty) return;
-            foreach (var l0 in GetOutByList<GH_Curve>(1))
-                foreach (var l1 in l0)
-                {
-                    bool set = Attributes.GetTopLevel.Selected;
-                    if (l1.IsValid)
-                        args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : DownColor.Def);
-                }
+                foreach (GH_Curve l1 in GetOutByItem<GH_Curve>(0).Where(l1 => l1.IsValid))
+                    args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : UpColor.Def);
+
+            if (DownColor.Def.IsEmpty)
+                foreach (GH_Curve l1 in GetOutByItem<GH_Curve>(1).Where(l1 => l1.IsValid))
+                    args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : DownColor.Def);
         }
         public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
         {
@@ -753,10 +730,10 @@ namespace Lt.Analysis
     /// Contour Flood Analysis
     /// </summary>
     // ReSharper disable once UnusedMember.Global
-    public sealed class LTRA : GradientComponent
+    public sealed class LTRA : GradientComponent, IMCom_DoubleClick
     {
         public LTRA() : base("山路坡度分析", "LTRA",
-            "分析山路坡度并按角度赋予其对应色彩",
+            "分析山路坡度并按角度赋予其对应色彩。\r\n双击：【坡度】【角度范围】切换为角度/弧度。\r\n烘焙：已按列成组已着色直线段",
             "分析",
             ID.LTRA, 3, LTResource.山路坡度分析)
         {
@@ -764,7 +741,8 @@ namespace Lt.Analysis
             Gra.ReCom = true;
             GI = new MBooleanMenuItem(this, true, "自适应角度(&A)", mf: m => m.Def ? "自适应" : "0-90º");
             C = new Update<Color[][]>(UpdateC);
-            SolutionExpired += (s, r) => C.Clear();
+            PreviewExpired += (s, r) => C.Clear();
+            UD = new MBooleanMenuItem(this, true, "使用角度(&)", true, mf: m => m.Def ? "角度" : "弧度");
         }
         protected override void AddParameter(ParamManager pm)
         {
@@ -772,14 +750,18 @@ namespace Lt.Analysis
             pm.AddIP(ParT.Integer, "精度", "E", "山路中线的细分重建密度(单位米)");
 
             pm.AddOP(ParT.Line, "路线", "L", "重建后用于分析的直线路线", ParamTrait.List);
-            pm.AddOP(ParT.Angle, "坡度", "A", "对应直线段的坡度(弧度)", ParamTrait.List | ParamTrait.UseDegrees);
-            pm.AddOP(ParT.Text, "坡度范围", "Rs", "山路直线的坡度范围（既坡高/坡长）");
-            pm.AddOP(ParT.Interval, "角度范围", "Ra", "山路直线与水平面所呈角度的范围");
+            pm.AddOP(ParT.Number, "坡度", "A", "对应直线段的坡度(度)", ParamTrait.List);
+            pm.AddOP(ParT.Text, "坡度范围", "Rs", "山路直线的坡度范围（即坡高/坡长）");
+            pm.AddOP(ParT.Interval, "角度范围", "Ra", "山路直线与水平面所呈角度（度）的范围");
         }
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (DA.Iteration == 0)
+            {
+                Lll = new List<List<Line>>(5);
+                Dll = new List<List<double>>(5);
+            }
             #region 输入输出变量初始化
-
             List<Curve> cl = new List<Curve>(0);
             int e = 0;
             if (!DA.GetDataList(0, cl) || cl.Count == 0
@@ -796,113 +778,97 @@ namespace Lt.Analysis
                 ).GetSegments()//将点转成多段线后，再提取全部线段
             ).ToArray();
 
-            List<Line> ll = new List<Line>(0);
-            //全部的线段都摊平到一个列表里
-            foreach (var t in la)
-                ll.AddRange(t);
+            List<Line> ll = la.SelectMany(t => t).ToList(); //全部的线段都摊平到一个列表里
 
             var v = ll.Select(t => t.Direction).ToArray();
             //向量单元化
             for (int i = 0; i < v.Length; i++)
                 v[i].Unitize();
+
+            var d = UD.Def ? Majas_Ex.R2A : 1;
             //获取方向向量，计算角度,并保证是正的
-            var a = v.Select(t => t.向量转坡度()).ToArray();
+            var a = v.Select(t => t.向量转坡度() * d).ToArray();
 
             DA.SetDataList(0, ll);
             DA.SetDataList(1, a);
-
-            Interval ai = a.Select(t => t * 59.27).ToInterval();//获取角度区间
+            Interval ai = a.ToInterval();//获取角度区间
             double s = Math.Max(Math.Tan(ai.Max), 0.01);//避免分母太大，计算坡度较大值
             string rs = "0 to " + (s > 1 ? $"1/{Math.Round(s, 2)}" : $"{1 / s}/1");//格式化坡度范围
             DA.SetData(2, rs);
-            DA.SetData(3, new Interval(Math.Round(ai.T0, 2), Math.Round(ai.T1, 2)));//格式化角度范围
+            DA.SetData(3, new Interval(Math.Round(ai.T0, UD.Def ? 2 : 4), Math.Round(ai.T1, UD.Def ? 2 : 4)));//格式化角度范围，弧度则不用格式化
+            Lll.Add(ll);
+            Dll.Add(a.ToList());
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalComponentMenuItems(menu);
             Menu_Boolean(menu, ref GI, "默认启用，此时渐变色彩范围对应实际的角度范围。\r\n不启用时，范围对应0-90º", click: (s, e) => UpdateC());
+            Menu_Boolean(menu, ref UD, "勾选时,【坡度】【角度范围】输出端输出度,否则为弧度", LTResource.Degrees_16,
+                (s, e) => UD.ReplacePDesc(true, "（弧度）", "（度）", 1, 3));
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            var L = GetOutByList<GH_Line>(0);
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-            for (int i = 0; i < L.Count; i++)
-                for (int j = 0; j < L[i].Count; j++)
-                    args.Display.DrawLine(L[i][j].Value, Attributes.GetTopLevel.Selected ? args.WireColour_Selected : C.Value[i][j]);
+            for (int i = 0; i < Lll.Count; i++)
+                for (int j = 0; j < Lll[i].Count; j++)
+                    args.Display.DrawLine(Lll[i][j], Attributes.GetTopLevel.Selected ? args.WireColour_Selected : C.Value[i][j]);
         }
         public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
         {
-            var L = GetOutByList<GH_Line>(0);
-            for (int i = 0; i < L.Count; i++)
+            if (Locked)return;
+            for (int i = 0; i < Lll.Count; i++)
             {
                 ObjectAttributes oa = att.Duplicate();
                 oa.ColorSource = ObjectColorSource.ColorFromObject;
                 int groupIndex = doc.Groups.Add();
                 oa.AddToGroup(groupIndex);
-                for (int j = 0; j < L[i].Count; j++)
+                for (int j = 0; j < Lll[i].Count; j++)
                 {
-                    GH_Line l = L[i][j];
-                    if (!l.IsValid) continue;
-                    ObjectAttributes oaj = att.Duplicate();
+                    ObjectAttributes oaj = oa.Duplicate();
                     oaj.ObjectColor = C.Value[i][j];
                     Guid id = Guid.Empty;
-                    l.BakeGeometry(doc, oaj, ref id);
+                    new GH_Line(Lll[i][j]).BakeGeometry(doc, oaj, ref id);
                     obj_ids.Add(id);
                 }
             }
         }
         public override void CreateAttributes()
-            => m_attributes = new LTRA_Attributes(this);
+            => m_attributes = new DoubleClick_Attributes(this);
 
         private void UpdateC()
         {
-            var l = GetOutByList<GH_Number>(1);
+            if(Locked)return;
             var itl = GetOutByItem<GH_Interval>(3);
 
-            if (l.Count != itl.Count)
+            if (Dll.Count != itl.Count)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "输出的坡度的列表数量与区间数量不一致，请联系开发者修复bug！");
-                C.Value = l.Select(t => t.Select(t0 => Color.Black).ToArray()).ToArray();
+                C.Value = Dll.Select(t => t.Select(t0 => Color.Black).ToArray()).ToArray();
                 return;
             }
 
-            C.Value = new Color[l.Count][];
-            for (int i = 0; i < l.Count; i++)
+            C.Value = new Color[Dll.Count][];
+            for (int i = 0; i < Dll.Count; i++)
             {
-                Interval interval = GI.Def ? itl[i].Value : Ty.A0;
-                C.Value[i] = l[i].Select(t => Dou2Col(interval, t.Value)).ToArray();
+                Interval interval = GI.Def ? itl[i].Value : Ty.A0(UD.Def);
+                C.Value[i] = Dll[i].Select(t => Dou2Col(interval, t)).ToArray();
             }
         }
 
         private readonly Update<Color[][]> C;
+        private List<List<Line>> Lll = new List<List<Line>>(0);
+        private List<List<double>> Dll = new List<List<double>>(0);
         /// <summary>
         /// 渐变是否自适应角度范围，否则为0-90度
         /// </summary>
-        internal MBooleanMenuItem GI;
-    }
-    /// <summary>
-    /// 山路坡度分析_属性
-    /// </summary>
-    public sealed class LTRA_Attributes : GH_ComponentAttributes
-    {
-        public LTRA_Attributes(IGH_Component component) : base(component) { }
-
-        public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
-        {
-            if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTRA j)
-            {
-                if (j.GI.IsVaild)
-                    j.GI.Item.PerformClick();
-                else
-                {
-                    j.GI.Def = !j.GI.Def;
-                }
-            }
-
-            return GH_ObjectResponse.Handled;
-        }
+        private MBooleanMenuItem GI;
+        /// <summary>
+        /// 使用角度
+        /// </summary>
+        private MBooleanMenuItem UD;
+        public MBooleanMenuItem DoubleClick => UD;
     }
     /// <summary>
     /// 实时山路坡度反馈
@@ -912,7 +878,7 @@ namespace Lt.Analysis
     {
         public LTRW() : base("实时山路坡度反馈", "LTRW",
             "实时反馈所绘制的山路坡度是否合理，\r\n不合理的区域用提示圆标注出来。" +
-            "\r\n注意:绘制需要在“road”图层top视图内。双击本电池图标可自动建立此图层并设为当前",
+            "\r\n注意:绘制需要在top视图【road】图层内。\r\n双击：自动建立【road】图层并切换为当前图层。\r\n烘焙：已按输入线成组已着色直线段",
             "分析",
             ID.LTRW, 3, LTResource.实时山路绘制反馈)
         {
@@ -923,34 +889,37 @@ namespace Lt.Analysis
             CV = new MBooleanMenuItem(this, true, "提示圆(&W)", mf: m => m.Def ? "显示提示圆" : "");
             MV = new MBooleanMenuItem(this, false, "地形网格(&T)", mf: m => m.Def ? "显示地形" : "");
             CR = new MDoubleMenuItem(this, 5, "提示圆半径(&R)");
-            Ct = new Update<Color[]>(UpdateC);
+            Ct = new Update<Color[][]>(UpdateC);
             Ma = new Update<Mesh[]>(UpdateM);
             PreviewExpired += (s, e) => Ct.Clear();
             PreviewExpired += (s, e) => Ma.Clear();
-            HL = 90;
-
+            HL = Math.PI;
         }
         protected override void AddParameter(ParamManager pm)
         {
-            pm.AddIP(ParT.Mesh, "地形", "M", "山地地形网格", ParamTrait.Item | ParamTrait.OneList);
+            pm.AddIP(ParT.Mesh, "地形", "M", "山地地形网格,仅限一列", ParamTrait.List | ParamTrait.OneList);
             pm.AddIP(ParT.Integer, "重建精度", "E", "道路中线细分重建精度(米/一个点)", ParamTrait.OnlyOne, def: 2);
             pm.AddIP(ParT.Number, "坡度倒数", "P", "坡度倒数，用来筛选不合理坡度", ParamTrait.OnlyOne, def: 4);
 
-            //todo 重写烘焙 烘焙出彩色分组的线段
-            pm.AddOP(ParT.Curve, "山路", "R", "被分析的山路线段", ParamTrait.List);
-            pm.AddOP(ParT.Angle, "坡度", "P", "山路线段对应的坡度(弧度)", ParamTrait.List | ParamTrait.UseDegrees);
-            pm.AddOP(ParT.Integer, "不合理", "I", "坡度超过上限的线段的索引", ParamTrait.List);
+            pm.AddOP(ParT.Curve, "山路", "R", "被分析的山路线段", ParamTrait.Tree);
+            pm.AddOP(ParT.Angle, "坡度", "P", "山路线段对应的坡度(弧度)", ParamTrait.Tree | ParamTrait.UseDegrees);
+            pm.AddOP(ParT.Integer, "不合理", "I", "坡度超过上限的线段的索引", ParamTrait.Tree);
         }
-        //尝试依靠线条哈希 对比去找到对应的色彩 来比较是否不同
-        //todo  将计算好的数据 和此时的哈希 作为插件数据写回到曲线中，再次读取的时候判断有无数据 哈希是否一致来决定是否重算
-        //todo 无数据时，启用多线程
+
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            Mesh m = new Mesh();
+            if (DA.Iteration > 0)
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "本电池仅进行一次计算，多余数据已被忽视");
+                return;
+            }
+
+            List<Mesh> m = new List<Mesh>(0);
             int e = 0;
             double p = 0;
-            if (!DA.GetData(0, ref m)
-                || !m.IsValid
+            if (!DA.GetDataList(0, m)
+                || m.Count == 0
+                || !m.All(t => t.IsValid)
                 || !DA.GetData(1, ref e)
                 || e <= 0
                 || !DA.GetData(2, ref p)
@@ -963,82 +932,148 @@ namespace Lt.Analysis
             }
             Settings.LayerIndexFilter = Ty.L;
 
-            HL = Math.Tan(1 / p);//计算坡度上限
+            HL = Math.Atan(1 / p);//计算坡度上限
 
-            var ma = new[] { m };
-            //获取山路投影后的重建线段
-            var ll = RhinoDoc.ActiveDoc.Objects.GetObjectList(Settings) //按图层 和按曲线类型来获取
-                .Select(t => (Curve)t.Geometry.Duplicate()) //备份一份并转换成曲线
+            var ma = m.ToArray();
 
-                .Select(t =>
-                    t.DivideByCount((int)Math.Round(t.GetLength() / e), true) //曲线按精度细分出t值
-                        .Select(t.PointAt)) //t值转点
-                                            //点投影到网格
-                .Select(t => Intersection.ProjectPointsToMeshes(ma, t, Vector3d.ZAxis, DocumentTolerance()))
-                .Where(t => t != null)//剔除不在网格上的点
-                .SelectMany(t => new Polyline(t).GetSegments()).ToArray(); //投影好的点转多段线，并获取线段
+            var cl = RhinoDoc.ActiveDoc.Objects.GetObjectList(Settings)
+                .Select(t => new ObjRef(t))
+                .ToArray();
 
-            var al = ll.Select(t =>
+            KeyValuePair<Guid, uint>[] hashl = cl.Select(t => new KeyValuePair<Guid, uint>(t.ObjectId, t.RuntimeSerialNumber)).ToArray();
+            Line[][] slaa = new Line[cl.Length][];
+            double[][] sdaa = new double[cl.Length][];
+            int[][] siaa = new int[cl.Length][];
+
+            for (int i = 0; i < cl.Length; i++)
             {
-                Vector3d v = t.Direction;//直线转对应向量
-                v.Unitize();
-                return v.向量转坡度();//向量转坡度(度)
+                #region 查找有无对应，有则输出对应索引
+                var ii = -1;
+                for (int j = 0; j < HashA.Length; j++)
+                {
+                    if (HashA[j].Key != hashl[i].Key || HashA[j].Value != hashl[i].Value) continue;
+                    ii = j;
+                    break;
+                }
+                #endregion
+
+                if (ii < 0)
+                {
+                    var t5 = cl[i].Curve().DuplicateCurve();//备份一份并转换成曲线
+                    var t4 = t5.DivideByCount((int)Math.Round(t5.GetLength() / e), true) //曲线按精度细分出t值
+                        .Select(t5.PointAt);//t值转点
+                    var t3 = Intersection.ProjectPointsToMeshes(ma, t4, Vector3d.ZAxis, DocumentTolerance());
+                    if (t3 == null)//剔除不在网格上的点
+                        continue;
+                    slaa[i] = new Polyline(t3).GetSegments();
+                    if (Ty.Paral)//尝试使用多核
+                        sdaa[i] = slaa[i].AsParallel().Select(t =>
+                        {
+                            Vector3d v = t.Direction;//直线转对应向量
+                            v.Unitize();
+                            return v.向量转坡度();//向量转坡度(度)
+                        }
+                        ).ToArray();
+                    else
+                        sdaa[i] = slaa[i].Select(t =>
+                        {
+                            Vector3d v = t.Direction;//直线转对应向量
+                            v.Unitize();
+                            return v.向量转坡度();//向量转坡度(度)
+                        }
+                        ).ToArray();
+
+                    List<int> ill = new List<int>(5);
+                    for (int j = 0; j < sdaa[i].Length; j++)
+                        if (sdaa[i][j] > HL)
+                            ill.Add(j);
+                    siaa[i] = ill.ToArray();
+
+                }//上次的数据无符合的曲线
+                else
+                {
+                    slaa[i] = Laa[ii];
+                    sdaa[i] = Daa[ii];
+                    siaa[i] = Iaa[ii];
+                }//有对应的曲线
             }
-            ).ToArray();
+            //储存计算结果，并转化数据
+            HashA = hashl;
+            Laa = slaa;
+            Daa = sdaa;
+            Iaa = siaa;
 
-            List<int> ill = new List<int>(5);
-            for (int i = 0; i < al.Length; i++)
-                if (al[i] > HL)
-                    ill.Add(i);
-
-            DA.SetDataList(0, ll);
-            DA.SetDataList(1, al);
-            DA.SetDataList(2, ill);
+            DA.SetDataTree(0, Laa.Select(t => t.Select(t0 => new GH_Line(t0))).ToGhStructure());
+            DA.SetDataTree(1, Daa.Select(t => t.Select(t0 => new GH_Number(t0))).ToGhStructure());
+            DA.SetDataTree(2, Iaa.Select(t => t.Select(t0 => new GH_Integer(t0))).ToGhStructure());
+            ExpirePreview(true);
         }
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalComponentMenuItems(menu);
             Menu_Boolean(menu, ref GI, "默认启用，此时渐变色彩范围对应实际的角度范围。\r\n不启用时，范围对应0-角度上限º");
-            Menu_Boolean(menu, ref MV, "控制是否显示地形网格", click: delegate
-            {
-                MV.Item.Checked = MV.Def;
-            });
+            Menu_Boolean(menu, ref MV, "控制是否显示地形网格");
             Menu_BGradient(MV, ref GH, "此渐变按高程着色输入网格");
-            Menu_Boolean(menu, ref CV, "控制是否显示提示圆", click: delegate
-            {
-                CV.Item.Checked = CV.Def;
-            });
+            Menu_Boolean(menu, ref CV, "控制是否显示提示圆");
             Menu_BDouble(CV, ref CR);
+        }
+
+        public override void RegisterRemoteIDs(GH_GuidTable table)
+        {
+            base.RegisterRemoteIDs(table);
+            foreach (var p in HashA)
+                table.Add(p.Key, this);
+        }
+
+        public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+        {
+            for (var i = 0; i < Laa.Length; i++)
+            {
+                var t = Laa[i];
+                ObjectAttributes oa = att.Duplicate();
+                oa.ColorSource = ObjectColorSource.ColorFromObject;
+                int groupIndex = doc.Groups.Add();
+                oa.AddToGroup(groupIndex);
+                for (var j = 0; j < t.Length; j++)
+                {
+                    ObjectAttributes oaj = oa.Duplicate();
+                    oaj.ObjectColor = Ct.Value[i][j];
+                    Guid id = Guid.Empty;
+                    new GH_Line(Laa[i][j]).BakeGeometry(doc, oaj, ref id);
+                    obj_ids.Add(id);
+                }
+            }
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || Hidden) return;
-            var l = GetOutByItem<GH_Curve>(0);
             Color c0 = Attributes.Selected ? args.WireColour_Selected : args.WireColour;
-            if (l.Count != 0)
+            if (Laa.Length != 0)
             {
-                for (int i = 0; i < l.Count; i++)
-                    args.Display.DrawCurve(l[i].Value, Ct.Value[i]); //绘制山路线段
-                if (CV.Def)
+                args.Viewport.GetFrustumNearPlane(out Plane worldXY);
+                for (int i = 0; i < Laa.Length; i++)
                 {
-                    //绘制提示圆
-                    args.Viewport.GetFrustumNearPlane(out Plane worldXY);
-                    var ca = GetOutByItem<GH_Integer>(2)
-                        .Select(t =>
+                    for (int j = 0; j < Laa[i].Length; j++)
+                        args.Display.DrawLine(Laa[i][j], Ct.Value[i][j]); //绘制山路线段
+                    if (CV.Def)
+                    {
+                        //绘制提示圆
+                        var i1 = i;
+                        var ca = Iaa[i].Select(t =>
                         {
-                            var l0 = l[t.Value].Value;//索引转换直线
-                            return (l0.PointAtStart + l0.PointAtEnd) / 2;//获取直线中点
+                            var l0 = Laa[i1][t];//索引转换直线
+                            return (l0.From + l0.To) / 2;//获取直线中点
                         })
-                        .Select(t => new Circle(worldXY, t, CR.Def)).ToArray();
-                    foreach (var c in ca)
-                        args.Display.DrawCircle(c, c0);
+                            .Select(t => new Circle(worldXY, t, CR.Def)).ToArray();
+                        foreach (var c in ca)
+                            args.Display.DrawCircle(c, c0);
+                    }
                 }
             }
             if (MV.Def && args.Document.PreviewMode == GH_PreviewMode.Wireframe)
                 foreach (var m in Ma.Value)//绘制地形网格
                     args.Display.DrawMeshWires(m, c0);
-
         }
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
@@ -1054,12 +1089,11 @@ namespace Lt.Analysis
         /// <summary>
         /// 山路色彩
         /// </summary>
-        private readonly Update<Color[]> Ct;
+        private readonly Update<Color[][]> Ct;
         private void UpdateC()
         {
-            var al = GetOutByItem<GH_Number>(1).Select(t => t.Value).ToArray();
-            Interval a1 = GI.Def ? al.ToInterval() : new Interval(0, HL);
-            Ct.Value = al.Select(t => Dou2Col(a1, t)).ToArray();
+            Interval a1 = GI.Def ? Daa.SelectMany(t => t).ToInterval() : new Interval(0, HL);
+            Ct.Value = Daa.Select(t => t.Select(t0 => Dou2Col(a1, t0)).ToArray()).ToArray();
         }
         /// <summary>
         /// 地形网格
@@ -1079,6 +1113,22 @@ namespace Lt.Analysis
                     return t;
                 }).ToArray();
         }
+        /// <summary>
+        /// 上次计算获得的曲线id及序列号
+        /// </summary>
+        private KeyValuePair<Guid, uint>[] HashA = new KeyValuePair<Guid, uint>[0];
+        /// <summary>
+        /// 上次计算获得的直线段
+        /// </summary>
+        private Line[][] Laa = new Line[0][];
+        /// <summary>
+        /// 上次计算获得的弧度
+        /// </summary>
+        private double[][] Daa = new double[0][];
+        /// <summary>
+        /// 上次计算获得的索引
+        /// </summary>
+        private int[][] Iaa = new int[0][];
         /// <summary>
         /// 显示地形
         /// </summary>
@@ -1125,9 +1175,9 @@ namespace Lt.Analysis
         {
             if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTRW)
             {
-                if (Ty.L < 0)
+                if (Ty.L < 0)//不存在图层则创建
                     RhinoDoc.ActiveDoc.Layers.Add("road", Color.Black);
-                RhinoDoc.ActiveDoc.Layers.SetCurrentLayerIndex(Ty.L, true);
+                RhinoDoc.ActiveDoc.Layers.SetCurrentLayerIndex(Ty.L, true);//图层设为当前
             }
 
             return GH_ObjectResponse.Handled;
