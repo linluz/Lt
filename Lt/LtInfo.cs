@@ -19,7 +19,7 @@ namespace Lt
         public override string AuthorName => "兰亭 & 林师兄";
 
         public override string AuthorContact => "1142060440@qq.com & 329978214@qq.com";
-        public override string Version => "0.4";
+        public override string Version => "0.5";
     }
     // ReSharper disable once UnusedMember.Global
     public class AssemblyPriority : GH_AssemblyPriority
