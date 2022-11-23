@@ -57,6 +57,8 @@ namespace Lt
         internal const string LTCF = "{EBC2C889-0BDA-41BD-A42B-A40E7AE160AB}";
         internal const string LTRA = "{8D99052C-7D8C-4A44-8438-B2E7147A471D}";
         internal const string LTRW = "{830EE783-C3CB-4ED9-A7D2-F50503E617E7}";
+
+        internal const string RCloud = "{E23B1B96-51E1-44C2-9B32-EA077F0B059D}";
         //internal const string 
     }
 }
