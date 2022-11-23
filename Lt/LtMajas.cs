@@ -23,6 +23,7 @@ using Rhino.Display;
 using Grasshopper.Kernel.Expressions;
 using System.Drawing.Drawing2D;
 using Grasshopper.GUI.Canvas;
+using static Lt.Majas.MComponent;
 
 // ReSharper disable UnusedMember.Global
 namespace Lt.Majas
@@ -1375,6 +1376,190 @@ namespace Lt.Majas
         }
         public List<Func<string>> MessageFl = new List<Func<string>>(3);
         #endregion
+        #region RuntimeMessage
+        public enum NumT
+        {
+            Default = 0,
+            Angle = 1,//角度
+            Length = 2,//长度
+            Slope = 3,//坡度
+            Curvature = 4,//曲率
+            Area = 5,//面积
+            Volume = 6,//体积
+            t = 7,//t值
+            Count = 8, //数量
+            Sum = 9,//总和
+            product = 10//乘积
+        }
+        /// <summary>
+        /// 检查a是否等于b，若是则报错
+        /// </summary>
+        /// <param name="a">数值A</param>
+        /// <param name="b">数值B</param>
+        /// <param name="sa">代表A的文本</param>
+        /// <param name="sb">代表B的文本，无输入则报错时直接输出数值</param>
+        /// <returns>检查结果</returns>
+        protected bool RMEqual(double a, double b, string sa, string sb = null, NumT ta = NumT.Default,
+            NumT tb = NumT.Default)
+        {
+            var r = a == b;
+            if (r)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
+                    $"{sa + ta.String()}不能等于{(string.IsNullOrWhiteSpace(sb) ? b.ToString(CultureInfo.InvariantCulture) : sb) + tb.String()}");
+            return r;
+        }
+        /// <summary>
+        /// 检查a是否等于b，若是则报错
+        /// </summary>
+        /// <param name="a">数值A</param>
+        /// <param name="b">数值B</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <param name="ib">b对应的输入端索引,-1则直接输出数值</param>
+        /// <returns>检查结果</returns>
+        protected bool RMEqual(double a, double b, int ia, int ib = -1, NumT ta = NumT.Default, NumT tb = NumT.Default)
+            => RMEqual(a, b, Params.Input[ia].Name, ib < 0 ? null : Params.Input[ib].Name, ta, tb);
+        /// <summary>
+        /// 检查a是否小于（等于）b，若是则报错
+        /// </summary>
+        /// <param name="a">数值A</param>
+        /// <param name="b">数值B</param>
+        /// <param name="sa">代表A的文本</param>
+        /// <param name="sb">代表B的文本，无输入则报错时直接输出数值</param>
+        /// <param name="equal">true则测试是否相等，否则不测</param>
+        /// <returns>检查结果</returns>
+        protected bool RMSmaller(double a, double b, string sa, string sb = null, NumT ta = NumT.Default, NumT tb = NumT.Default, bool equal = false)
+        {
+            var r = equal ? a <= b : a < b;
+            if (r) //a不能小于等于b
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
+                    $"{sa + ta.String()}不能小于{(equal ? "等于" : "") + (string.IsNullOrWhiteSpace(sb) ? b.ToString(CultureInfo.InvariantCulture) : sb) + tb.String()}");
+            return r;
+        }
+        /// <summary>
+        /// 检查a是否小于（等于）b，若是则报错
+        /// </summary>
+        /// <param name="a">数值A</param>
+        /// <param name="b">数值B</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <param name="ib">b对应的输入端索引,-1则直接输出数值</param>
+        /// <param name="equal">true则测试是否相等，否则不测</param>
+        /// <returns>检查结果</returns>
+        protected bool RMSmaller(double a, double b, int ia, int ib = -1, NumT ta = NumT.Default, NumT tb = NumT.Default,
+           bool equal = false)
+           => RMSmaller(a, b, Params.Input[ia].Name, ib < 0 ? null : Params.Input[ib].Name, ta, tb, equal);
+        /// <summary>
+        /// 检测a是否大于（等于）b，若是则报错
+        /// </summary>
+        /// <param name="a">数值A</param>
+        /// <param name="b">数值B</param>
+        /// <param name="sa">代表A的文本</param>
+        /// <param name="sb">代表B的文本，无输入则报错时直接输出数值</param>
+        /// <param name="equal">true则测试是否相等，否则不测</param>
+        /// <returns>检测结果</returns>
+        protected bool RMLarger(double a, double b, string sa, string sb = null, NumT ta = NumT.Default, NumT tb = NumT.Default, bool equal = false)
+        {
+            var r = equal ? a >= b : a > b;
+            if (r) //a不能大于等于b
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
+                    $"{sa + ta.String()}不能大于{(equal ? "等于" : "") + (string.IsNullOrWhiteSpace(sb) ? b.ToString(CultureInfo.InvariantCulture) : sb) + tb.String()}");
+            return r;
+        }
+        /// <summary>
+        /// 检测a是否大于（等于）b，若是则报错
+        /// </summary>
+        /// <param name="a">数值A</param>
+        /// <param name="b">数值B</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <param name="ib">b对应的输入端索引,-1则直接输出数值</param>
+        /// <param name="equal">true则测试是否相等，否则不测</param>
+        /// <returns>检查结果</returns>
+        protected bool RMLarger(double a, double b, int ia, int ib = -1, NumT ta = NumT.Default, NumT tb = NumT.Default, bool equal = false)
+        => RMLarger(a, b, Params.Input[ia].Name, ib < 0 ? null : Params.Input[ib].Name, ta, tb, equal);
+        /// <summary>
+        /// 检查几何体是否无效，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的几何体</param>
+        /// <param name="sa">代表a的文本</param>
+        /// <returns>检查结果</returns>
+        protected bool RMNoValid(GeometryBase a, string sa)
+        {
+            var b = !a.IsValid;
+            if (b)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{sa}无效");
+            return b;
+        }
+        /// <summary>
+        /// 检查几何体是否无效，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的几何体</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <returns>检查结果</returns>
+        protected bool RMNoValid(GeometryBase a, int ia)
+            => RMNoValid(a, Params.Input[ia].Name);
+        /// <summary>
+        /// 检查曲线是否未闭合，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的曲线</param>
+        /// <param name="sa">代表a的文本</param>
+        /// <returns>检查结果</returns>
+        protected bool RMNoClosed(Curve a, string sa)
+        {
+            var r = !a.IsClosed;
+            if (r)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{sa}未闭合");
+            return r;
+        }
+        /// <summary>
+        /// 检查曲线是否未闭合，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的曲线</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <returns>检查结果</returns>
+        protected bool RMNoClosed(Curve a, int ia)
+            => RMNoClosed(a, Params.Input[ia].Name);
+        /// <summary>
+        /// 检查曲线是否未平面，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的曲线</param>
+        /// <param name="sa">代表a的文本</param>
+        /// <returns>检查结果</returns>
+        protected bool RNNoPlanar(Curve a, string sa)
+        {
+            var r = !a.IsPlanar();
+            if(r)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,$"{sa}不是平面曲线");
+            return r;
+        }
+        /// <summary>
+        /// 检查曲线是否未平面，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的曲线</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <returns>检查结果</returns>
+        protected bool RNNoPlanar(Curve a, int ia)
+            => RNNoPlanar(a, Params.Input[ia].Name);
+        /// <summary>
+        /// 检查曲面是否未平面，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的曲面</param>
+        /// <param name="sa">代表a的文本</param>
+        /// <returns>检查结果</returns>
+        protected bool RNNoPlanar(Surface a, string sa)
+        {
+            var r = !a.IsPlanar();
+            if (r)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{sa}不是平面曲面");
+            return r;
+        }
+        /// <summary>
+        /// 检查曲面是否未平面，若是则报错
+        /// </summary>
+        /// <param name="a">要检查的曲面</param>
+        /// <param name="ia">a对应的输入端索引</param>
+        /// <returns>检查结果</returns>
+        protected bool RNNoPlanar(Surface a, int ia)
+            => RNNoPlanar(a, Params.Input[ia].Name);
+        #endregion
         #region PreviewArgs
         /// <summary>
         /// 生成网格预览参数
@@ -1894,6 +2079,36 @@ namespace Lt.Majas
             return m;
         }
 
+        internal static string String(this NumT e)
+        {
+            switch (e)
+            {
+                case NumT.Default:
+                    return "";
+                case NumT.Angle:
+                    return "的角度";
+                case NumT.Length:
+                    return "的长度";
+                case NumT.Slope:
+                    return "的坡度";
+                case NumT.Curvature:
+                    return "的曲率";
+                case NumT.Area:
+                    return "的面积";
+                case NumT.Volume:
+                    return "的体积";
+                case NumT.t:
+                    return "的t值";
+                case NumT.Count:
+                    return "的数量";
+                case NumT.Sum:
+                    return "的总和";
+                case NumT.product:
+                    return "的乘积";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(e), e, null);
+            }
+        }
         public static Param_Integer AddNamedValueL(this Param_Integer a, IEnumerable<string> b)
         {
             StringBuilder s = new StringBuilder();
