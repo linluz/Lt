@@ -57,14 +57,15 @@ namespace Lt.Basis
             double min = 0;
             bool r = false;
             int s = 0;
-            if (!DA.GetData(0, ref b)
-                || RMNoValid(b, 0) || RMNoClosed(b, 0) || RNNoPlanar(b, 0) //获取线框，并检测闭合与平面
-                || !DA.GetData(1, ref min) || RMSmaller(min, 0.5, 1, equal: true) //获取最小值，检测是否大于0.5
-                || RMLarger(min * 3, b.GetLength(), 1, 0,  tb: NumT.Length) //检测3倍最小值是否大于线长
-                || !DA.GetData(3, ref r))
+            if (!DA.GetData(0, ref b) ||
+                RMNoValid(b, 0) || RMNoClosed(b, 0) || RNNoPlanar(b, 0) || //获取线框，并检测闭合与平面
+                !DA.GetData(1, ref min) || RMSmaller(min, 0.5, 1, equal: true) || //获取最小值，检测是否大于0.5
+                RMLarger(min * 3, b.GetLength(), 1, 0, tb: NumT.Length) || //检测3倍最小值是否大于线长
+                !DA.GetData(3, ref r))
                 return;
             var bmax = DA.GetData(2, ref max);
-            if (bmax && RMSmaller(max, min, 2, 1))//能获取的时候检测最大值、最小值的关系，不对就报错不输出
+            if (bmax && RMSmaller(max, min, 2, 1) //能获取的时候检测最大值、最小值的关系，不对就报错不输出
+                     && !DA.GetData(4, ref s)) //无法获取种子
                 return;
             #endregion
 
