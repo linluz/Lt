@@ -56,8 +56,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LtBasis.cs" />
-    <Compile Include="LtComponent.cs" />
+    <Compile Include="Analysis\LTRA.cs" />
+    <Compile Include="Analysis\LTCE.cs" />
+    <Compile Include="Analysis\LTCF.cs" />
+    <Compile Include="Analysis\LTMD.cs" />
+    <Compile Include="Analysis\LTME.cs" />
+    <Compile Include="Analysis\LTMF.cs" />
+    <Compile Include="Analysis\LTMG.cs" />
+    <Compile Include="Analysis\LTRW.cs" />
+    <Compile Include="Analysis\LTVL.cs" />
+    <Compile Include="Basis\CanopyC.cs" />
+    <Compile Include="Basis\RCloud.cs" />
     <Compile Include="LtInfo.cs" />
     <Compile Include="LtMajas.cs" />
     <Compile Include="LtOsboletes.cs" />
@@ -239,6 +248,7 @@
   <ItemGroup>
     <None Include="Resources\Degrees_16.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
