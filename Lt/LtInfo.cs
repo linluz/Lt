@@ -59,6 +59,7 @@ namespace Lt
         internal const string LTRW = "{830EE783-C3CB-4ED9-A7D2-F50503E617E7}";
 
         internal const string RCloud = "{E23B1B96-51E1-44C2-9B32-EA077F0B059D}";
+        internal const string CanopyC = "{79653B95-A6D9-498B-9398-9B732E56C021}";
         //internal const string 
     }
 }

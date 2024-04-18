@@ -2078,7 +2078,8 @@ namespace Lt.Majas
             m.Append(t);
             return m;
         }
-
+        public static double  NextNumber(this Random r,double min, double max) 
+            => min + r.NextDouble() * (max - min);
         internal static string String(this NumT e)
         {
             switch (e)

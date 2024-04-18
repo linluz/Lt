@@ -1,28 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Grasshopper.GUI;
-using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Types;
-using Rhino;
-using Rhino.DocObjects;
 using Rhino.Geometry;
-using Rhino.Geometry.Intersect;
 using Lt.Majas;
-using Grasshopper.GUI.Gradient;
-using Rhino.Display;
-using Grasshopper.Kernel.Special;
-using Grasshopper.Kernel.Parameters;
 
 
 namespace Lt.Basis
 {
-
     /// <summary>
     /// 云线
     /// Revcloud
@@ -57,11 +44,14 @@ namespace Lt.Basis
             double min = 0;
             bool r = false;
             int s = 0;
-            if (!DA.GetData(0, ref b) ||
-                RMNoValid(b, 0) || RMNoClosed(b, 0) || RNNoPlanar(b, 0) || //获取线框，并检测闭合与平面
-                !DA.GetData(1, ref min) || RMSmaller(min, 0.5, 1, equal: true) || //获取最小值，检测是否大于0.5
-                RMLarger(min * 3, b.GetLength(), 1, 0, tb: NumT.Length) || //检测3倍最小值是否大于线长
-                !DA.GetData(3, ref r))
+            if (!DA.GetData(0, ref b) //获取线框，并检测闭合与平面
+                || RMNoValid(b, 0)
+                || RMNoClosed(b, 0)
+                || RNNoPlanar(b, 0)
+                || !DA.GetData(1, ref min)
+                || RMSmaller(min, 0.5, 1, equal: true) //获取最小值，检测是否大于0.5
+                || RMLarger(min * 3, b.GetLength(), 1, 0, tb: NumT.Length) //检测3倍最小值是否大于线长
+                || !DA.GetData(3, ref r))
                 return;
             var bmax = DA.GetData(2, ref max);
             if (bmax && RMSmaller(max, min, 2, 1) //能获取的时候检测最大值、最小值的关系，不对就报错不输出
@@ -70,22 +60,21 @@ namespace Lt.Basis
             #endregion
 
             const double chordR = 1.2740056;//弧长转弦长系数（1/3）：arcsin(12/13)*13/12
-            var rmax = (max / chordR);//最小弧长转最小弦长
-            var rmin = (min / chordR);//最大弧长转最大弦长
+            var rmax = max / chordR;//最小弧长转最小弦长
+            var rmin = min / chordR;//最大弧长转最大弦长
             var l = b.GetLength();//线框长度
-           
+
             double[] ra;
             int c;
             if (bmax)
             {
-                c = (int)Math.Floor(l *2/ (rmax + rmin));//除以r中值后 最接近的小的数量
+                c = (int)Math.Floor(l * 2 / (rmax + rmin));//除以r中值后 最接近的小的数量
                 var r1 = l / c;//实际的平均值
                 var c1 = c / 2;
-                var rx = rmax - rmin;//差值
-                ra = new double[c] ; //加头
+                ra = new double[c]; //加头
                 var c2 = c1;//与下一半的间隔
-                Random ran = new Random(s);
-                if (c % 2 == 1) 
+                var ran = new Random(s);
+                if (c % 2 == 1)
                 {
                     ra[c1] = r1; //给中间加值
                     c2++;//奇数时间隔加1
@@ -93,7 +82,7 @@ namespace Lt.Basis
 
                 for (int i = 0; i < c1; i++)
                 {
-                    double d0=(ran.NextDouble()-0.5) *rx;
+                    double d0 = ran.NextNumber(rmin, rmax);
                     ra[i] = r1 + d0;
                     ra[i + c2] = r1 - d0;
                 }//生成两段随机
@@ -125,5 +114,90 @@ namespace Lt.Basis
             DA.SetData(1, arca.Select(t => t.GetLength()).ToInterval());
         }
     }
+    /// <summary>
+    /// 林冠线
+    /// Canopy Curve
+    /// </summary>
+    // ReSharper disable once UnusedMember.Global
+    public class CanopyC : ADCComponent
+    {//debug 待 及双击效果
+        public CanopyC() : base(
+            "林冠线", "CanopyC",
+            "通过轮廓曲线来生成林冠线",
+            "基础",
+            ID.CanopyC, 1, LTResource.林冠线)
+        {
+            Restrict = new MBooleanMenuItem(this, false, "轮廓限制(&B)", true, mf: m => m.Def ? "限制树心" : "限制树冠");
+        }
+        protected override void AddParameter(ParamManager pm)
+        {
+            pm.AddIP(ParT.Curve, "轮廓", "B", "拾取基础线框（树林边缘）");
+            pm.AddIP(ParT.Number, "半径", "R", "每棵树的树冠半径");
+            pm.AddIP(ParT.Number, "密度", "D", "每个树冠面积下所含的树量");
+            pm.AddIP(ParT.Number, "剔除", "L", "小于此长度的碎线将被剔除");
+            pm.AddIP(ParT.Integer, "种子", "S", "种树的随机种子");
 
+            pm.AddOP(ParT.Group, "林冠线", "C", "生成的成组的林冠线");
+        }
+        protected override void SolveInstance(IGH_DataAccess DA)
+        {
+            #region 初始化 获取输入
+            Curve b = new PolyCurve();
+            double r = 0;
+            double d = 0;
+            double l = 0;
+            int s = 0;
+            if (!DA.GetData(0, ref b) || RMNoValid(b, 0) || RMNoClosed(b, 0) || RNNoPlanar(b, 0) || //获取线框，并检测闭合与平面
+                !DA.GetData(1, ref r) || RMSmaller(r, 0, 1, equal: true) ||
+                !DA.GetData(2, ref d) || RMSmaller(d, 0, 2, equal: true) ||
+                !DA.GetData(3, ref l) || RMSmaller(l, 0, 3, equal: true) ||
+                !DA.GetData(4, ref s)) return;
+            #endregion
+
+            var TreeArea = r * r * Math.PI;
+            Curve[] bs = { b };
+            if (Restrict.Def)
+            {
+                b.TryGetPlane(out Plane plane);
+                bs = b.Offset(plane, -r, DocumentTolerance(), CurveOffsetCornerStyle.Sharp)//偏移出树心限制线
+                    .Where(t => t != null && t.IsValid).ToArray();//剔除为null或无效的值
+            }
+
+            var ba = bs.Select(t => new { V = t, A = Brep.CreatePlanarBreps(b)[0].GetArea() })
+                .Where(t => t.A > TreeArea).ToArray();//剔除面积过小的
+
+            GH_GeometryGroup group = new GH_GeometryGroup();
+            foreach (var ta in ba)
+            {
+                //树量=轮廓面积/(树冠面积/单冠密度)
+                var count = (int)Math.Floor(ta.A / (TreeArea / d));
+                b = ta.V;
+                BoundingBox box = b.GetBoundingBox(true);
+                int c0 = 0;
+                Random ran = new Random(s);
+                List<Point3d> pl = new List<Point3d>(count);
+                do
+                {
+                    Point3d p = new Point3d(ran.NextNumber(box.Min.X, box.Max.X), ran.NextNumber(box.Min.Y, box.Max.Y), 0);
+                    PointContainment pc = b.Contains(p);
+                    if (pc == PointContainment.Unset || pc != PointContainment.Outside)
+                        continue;
+                    pl.Add(p);
+                    c0++;
+                } while (c0 == count);
+
+                var ca = Curve.CreateBooleanUnion(pl.Select(t => new Circle(t, r).ToNurbsCurve()))
+                    //转成圆组并求交集
+                    .Where(t => t.GetLength() >= d)//剔除长度短于d
+                    .Select(t => new GH_Curve(t)).ToArray();//转换成gh类型
+                group.Objects.AddRange(ca);
+            }
+
+            DA.SetData(0, group);
+        }
+        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
+            => Menu_Boolean(menu, ref Restrict, "未勾选时，轮廓线为树心范围，勾选后，为树冠范围");
+        private static MBooleanMenuItem Restrict;
+        public override MBooleanMenuItem DoubleClick => Restrict;
+    }
 }
