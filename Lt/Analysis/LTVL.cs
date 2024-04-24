@@ -10,6 +10,7 @@ using Rhino.Display;
 using Rhino.Geometry.Intersect;
 using Rhino.Geometry;
 using System.Windows.Forms;
+using Lt.Extensions;
 
 namespace Lt.Analysis
 {
@@ -65,26 +66,60 @@ namespace Lt.Analysis
                 || !DA.GetData(3, ref a))
                 return;
             DA.GetDataList(1, o);
-            var om = o.Select
-            (t =>
-                Mesh.CreateFromBrep(t).Aggregate(new Mesh(), (c, t0) => c.AppendMesh(t0))
-            ).ToArray();
+            var om = o.Select(t =>
+                Mesh.CreateFromBrep(t)
+                    .Aggregate(new Mesh(), (c, t0) => c.AppendMesh(t0)))
+                .ToArray();
             Point3d[] pt, grid;
 
             //制作网格上用于测量的点阵
-            var mb = new BoundingBox();
-            foreach (Point3f p3f in tm.Vertices)
-                mb.Union(new Point3d(p3f));
+            BoundingBox mb = tm.Vertices.Aggregate(new BoundingBox(), (s, i) => s.UnionPoint(i));
 
-            double px = mb.Min.X;
-            double py = mb.Min.Y;
-            int rx = (int)Math.Round((mb.Max.X - px) / a);
-            int ry = (int)Math.Round((mb.Max.Y - py) / a);
+            int rx = (int)Math.Round((mb.Max.X - mb.Min.X) / a);
+            int ry = (int)Math.Round((mb.Max.Y - mb.Min.Y) / a);
             //获取平面上点阵
             Point3d[] grid0 = new Point3d[rx * ry];
             for (int ix = 0; ix < rx; ix++)
                 for (int iy = 0; iy < ry; iy++)
                     grid0[ix * ry + iy] = new Point3d(mb.Min.X + ix * a, mb.Min.Y + iy * a, mb.Min.Z);
+
+            var eh = new Vector3d(0, 0, EyeHight.Def);//眼高向量
+            if (Ty.Paral)
+            {
+                pt = pl.AsParallel()
+                    .Select(ProjectZ)//将观测点投影到地形网格上
+                    .Where(t => t != Point3d.Unset) 
+                    .Select(t => t + eh)//增加眼高
+                    .ToArray();
+
+                //将栅格点投影到地形网格上
+                grid = grid0.AsParallel()
+                    .Select(ProjectZ)//投影到网格上
+                    .Where(t => t != Point3d.Unset)//剔除不在网格上的点
+                    .Where(t => pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1)) //获取无遮挡时能被观察到的点
+                    .Where(t => pt.Any(t0 => om.All(t1 => OLineOverlap(t1, t0, t))))//剔除被障碍物遮挡
+                    .ToArray();
+            }
+            else
+            {
+                pt = pl.Select(ProjectZ)//将观测点投影到地形网格上
+                    .Where(t => t != Point3d.Unset)
+                    .Select(t => t + eh)//增加眼高
+                    .ToArray();
+
+                //将栅格点投影到地形网格上
+                grid = grid0.Select(ProjectZ)//投影到网格上
+                    .Where(t => t != Point3d.Unset)//剔除不在网格上的点
+                    .Where(t =>
+                        pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1))//获取无遮挡时能被观察到的点
+                    .Where(t => pt.Any(t0 => om.All(t1 => OLineOverlap(t1, t0, t)))) //剔除被障碍物遮挡
+                    .ToArray();
+            }
+
+            DA.SetDataList(0, pt);
+            DA.SetDataList(1, grid);
+            return;
+
             //将点z向投影到网格上
             Point3d ProjectZ(Point3d t)
             {
@@ -92,46 +127,6 @@ namespace Lt.Analysis
                 double d = Intersection.MeshRay(tm, r); //求交点参数
                 return d < 0 ? Point3d.Unset : r.PointAt(d); //返回点
             }
-
-            if (Ty.Paral)
-            {
-                //将栅格点投影到地形网格上
-                var g0 = grid0.AsParallel().Select(ProjectZ).Where(t => t != Point3d.Unset).AsParallel();//剔除不在网格上的点
-
-                //将观测点投影到地形网格上，并增加眼高
-                pt = pl.AsParallel().Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();
-                for (int i = 0; i < pt.LongLength; i++)
-                    pt[i].Z += EyeHight.Def;//增加眼高
-
-                //获取无遮挡时能被观察到的点
-                g0 = g0.Where(t =>
-                    pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
-                //剔除被障碍物遮挡
-                grid = g0.Where(t =>
-                    pt.Any(t0 => om.All(t1 => OLineOverlap(t1, t0, t)))
-                ).ToArray();
-            }
-            else
-            {
-                //将栅格点投影到地形网格上
-                var g0 = grid0.Select(ProjectZ).Where(t => t != Point3d.Unset);//剔除不在网格上的点
-
-                //将观测点投影到地形网格上，并增加眼高
-                pt = pl.Select(ProjectZ).Where(t => t != Point3d.Unset).ToArray();
-                for (int i = 0; i < pt.LongLength; i++)
-                    pt[i].Z += EyeHight.Def;//增加眼高
-
-                //获取无遮挡时能被观察到的点
-                g0 = g0.Where(t =>
-                    pt.Any(t0 => Intersection.MeshLine(tm, new Line(t0, t), out _).Length == 1));
-                //剔除被障碍物遮挡
-                grid = g0.Where(t =>
-                    pt.Any(t0 => om.All(t1 => OLineOverlap(t1, t0, t)))
-                ).ToArray();
-            }
-
-            DA.SetDataList(0, pt);
-            DA.SetDataList(1, grid);
         }
         /// <summary>
         /// 障碍物与直线的重叠情况
@@ -167,28 +162,25 @@ namespace Lt.Analysis
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded)
             {
                 args.Viewport.GetFrustumNearPlane(out Plane worldXY);
-                foreach (GH_Point t in GetOutByItem<GH_Point>(0))
-                    args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeO.Def), ColorO.Def, args.DefaultCurveThickness);
+
+                GetOutByItem<GH_Point>(0).ForEach(t =>
+                    args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeO.Def), ColorO.Def, args.DefaultCurveThickness));
 
                 Color ccc = Attributes.Selected ? args.WireColour_Selected : ColorV.Def;
                 if (Ty.Paral)
                 {
                     Parallel.ForEach(GetOutByItem<GH_Point>(1), t =>
-                    {
-                        args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def),
-                            ccc, args.DefaultCurveThickness);
-                    });
+                        args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def), ccc, args.DefaultCurveThickness));
                 }
                 else
-                    foreach (GH_Point t in GetOutByItem<GH_Point>(1))
-                        args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def),
-                            ccc, args.DefaultCurveThickness);
+                    GetOutByItem<GH_Point>(1).ForEach(t =>
+                        args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def), ccc, args.DefaultCurveThickness));
             }
             if (!Ov.Def) return;
             //绘制障碍物
             GH_PreviewWireArgs pwa = ToPreviewWireArgs(args, Color.FromArgb(Oc.Def.R, Oc.Def.B, Oc.Def.G));
-            foreach (GH_Brep o in GetIntByItem<GH_Brep>(1))
-                o.DrawViewportWires(pwa);
+           
+            GetIntByItem<GH_Brep>(1).ForEach(t=> t.DrawViewportWires(pwa));
         }
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
@@ -201,8 +193,7 @@ namespace Lt.Analysis
             if (Ov.Def)//绘制障碍物
             {
                 GH_PreviewMeshArgs pma = ToPreviewMeshArgs(args, Oc.Def, false);
-                foreach (GH_Brep o in GetIntByItem<GH_Brep>(1))
-                    o.DrawViewportMeshes(pma);
+                GetIntByItem<GH_Brep>(1).ForEach(t => t.DrawViewportMeshes(pma));
             }
 
             var displayBitmapDrawList = new DisplayBitmapDrawList
