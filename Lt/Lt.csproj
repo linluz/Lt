@@ -67,6 +67,8 @@
     <Compile Include="Analysis\LTVL.cs" />
     <Compile Include="Basis\CanopyC.cs" />
     <Compile Include="Basis\RCloud.cs" />
+    <Compile Include="Extensions\RhGeoExtensions.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="LtInfo.cs" />
     <Compile Include="LtMajas.cs" />
     <Compile Include="LtOsboletes.cs" />
