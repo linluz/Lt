@@ -69,9 +69,23 @@
     <Compile Include="GHComponent\Basis\RCloud.cs" />
     <Compile Include="Base\Extensions\RhGeoExtensions.cs" />
     <Compile Include="Base\Extensions\StringExtensions.cs" />
+    <Compile Include="GHComponent\Osboletes\AOComponent.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb1\LTCF_Osb.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb1\LTFT.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb1\LTTE.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb1\LTTG.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb1\LTVL_Osb.cs" />
+    <Compile Include="GHComponent\Osboletes\GradientComponent_Osb.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTCE_Osb2.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTCF_Osb2.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTMD_Osb2.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTME_Osb2.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTMF_Osb2.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTMG_Osb2.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTVL_Osb2.cs" />
     <Compile Include="LtInfo.cs" />
     <Compile Include="LtMajas.cs" />
-    <Compile Include="LtOsboletes.cs" />
+    <Compile Include="GHComponent\Osboletes\Osb2\LTSA.cs" />
     <Compile Include="LTResource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
