@@ -7,7 +7,7 @@ using Lt.Majas;
 using Rhino.Geometry;
 using System.Windows.Forms;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     /// <summary>
     /// 网格坡向分析

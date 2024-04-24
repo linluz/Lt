@@ -3,7 +3,7 @@ using Grasshopper.Kernel;
 using Lt.Majas;
 using Rhino.Geometry;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     /// <summary>
     /// 网格高程分析

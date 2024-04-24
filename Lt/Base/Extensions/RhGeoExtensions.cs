@@ -1,6 +1,6 @@
 ﻿using Rhino.Geometry;
 
-namespace Lt.Extensions
+namespace Lt.Base.Extensions
 {
     public static class RhGeoExtensions
     {

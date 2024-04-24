@@ -8,7 +8,7 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Rhino;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     /// <summary>
     /// 等高线高程分析

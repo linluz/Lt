@@ -10,7 +10,7 @@ using Rhino.Geometry;
 using Rhino;
 using System.Windows.Forms;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     /// <summary>
     /// 等高线淹没分析

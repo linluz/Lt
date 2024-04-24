@@ -4,7 +4,7 @@ using Grasshopper.Kernel;
 using Lt.Majas;
 using Rhino.Geometry;
 
-namespace Lt.Basis
+namespace Lt.GHComponent.Basis
 {
     /// <summary>
     /// 云线

@@ -1,4 +1,4 @@
-﻿namespace Lt.Extensions
+﻿namespace Lt.Base.Extensions
 {
     public static class StringExtensions
     {

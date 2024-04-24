@@ -6,7 +6,7 @@ using Lt.Majas;
 using Rhino.Geometry;
 using System.Windows.Forms;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     //首选项里 增加lt标签页 里面有默认渐变 默认色彩标尺 默认提示圆尺寸 等等
     //after 给渐变的电池 加色彩标尺

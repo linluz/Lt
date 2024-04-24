@@ -15,7 +15,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 using Grasshopper.Kernel.Attributes;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     /// <summary>
     /// 实时山路坡度反馈

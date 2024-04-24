@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Grasshopper.Kernel.Types;
+using System.Windows.Forms;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Lt.Majas;
 using Rhino.Geometry;
-using System.Windows.Forms;
 
-namespace Lt.Basis
+namespace Lt.GHComponent.Basis
 {
     /// <summary>
     /// 林冠线

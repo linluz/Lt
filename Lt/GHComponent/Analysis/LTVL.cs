@@ -10,9 +10,8 @@ using Rhino.Display;
 using Rhino.Geometry.Intersect;
 using Rhino.Geometry;
 using System.Windows.Forms;
-using Lt.Extensions;
 
-namespace Lt.Analysis
+namespace Lt.GHComponent.Analysis
 {
     /// <summary>
     /// 视线分析

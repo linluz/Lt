@@ -56,19 +56,19 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Analysis\LTRA.cs" />
-    <Compile Include="Analysis\LTCE.cs" />
-    <Compile Include="Analysis\LTCF.cs" />
-    <Compile Include="Analysis\LTMD.cs" />
-    <Compile Include="Analysis\LTME.cs" />
-    <Compile Include="Analysis\LTMF.cs" />
-    <Compile Include="Analysis\LTMG.cs" />
-    <Compile Include="Analysis\LTRW.cs" />
-    <Compile Include="Analysis\LTVL.cs" />
-    <Compile Include="Basis\CanopyC.cs" />
-    <Compile Include="Basis\RCloud.cs" />
-    <Compile Include="Extensions\RhGeoExtensions.cs" />
-    <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="GHComponent\Analysis\LTRA.cs" />
+    <Compile Include="GHComponent\Analysis\LTCE.cs" />
+    <Compile Include="GHComponent\Analysis\LTCF.cs" />
+    <Compile Include="GHComponent\Analysis\LTMD.cs" />
+    <Compile Include="GHComponent\Analysis\LTME.cs" />
+    <Compile Include="GHComponent\Analysis\LTMF.cs" />
+    <Compile Include="GHComponent\Analysis\LTMG.cs" />
+    <Compile Include="GHComponent\Analysis\LTRW.cs" />
+    <Compile Include="GHComponent\Analysis\LTVL.cs" />
+    <Compile Include="GHComponent\Basis\CanopyC.cs" />
+    <Compile Include="GHComponent\Basis\RCloud.cs" />
+    <Compile Include="Base\Extensions\RhGeoExtensions.cs" />
+    <Compile Include="Base\Extensions\StringExtensions.cs" />
     <Compile Include="LtInfo.cs" />
     <Compile Include="LtMajas.cs" />
     <Compile Include="LtOsboletes.cs" />
