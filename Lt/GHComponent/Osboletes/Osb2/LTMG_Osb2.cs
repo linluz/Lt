@@ -1,4 +1,5 @@
-﻿using Lt.GHComponent.Analysis;
+﻿using Lt.Base;
+using Lt.GHComponent.Analysis;
 using Lt.Majas;
 
 namespace Lt.GHComponent.Osboletes.Osb2
@@ -13,7 +14,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
             "分析",
             ID.LTMG_Osb2, nameof(LTMG), LTResource.山体坡度分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)

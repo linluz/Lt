@@ -9,6 +9,9 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Rhino;
 using System.Windows.Forms;
+using Lt.Base;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -24,7 +27,7 @@ namespace Lt.GHComponent.Analysis
             "分析",
             ID.LTRA, 3, LTResource.山路坡度分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
             GI = new MBooleanMenuItem(this, true, "自适应角度(&A)", mf: m => m.Def ? "自适应" : "0-90º");
             C = new Update<Color[][]>(UpdateC);
@@ -67,14 +70,13 @@ namespace Lt.GHComponent.Analysis
 
             List<Line> ll = la.SelectMany(t => t).ToList(); //全部的线段都摊平到一个列表里
 
-            var v = ll.Select(t => t.Direction).ToArray();
-            //向量单元化
-            for (int i = 0; i < v.Length; i++)
-                v[i].Unitize();
-
             var d = UD.Def ? Majas_Ex.R2A : 1;
+            
             //获取方向向量，计算角度,并保证是正的
-            var a = v.Select(t => t.向量转坡度() * d).ToArray();
+            var a = ll.Select(t => t.Direction)
+                .Select(t=>t.ToUnitize()) //向量单元化
+                .Select(t => t.VectorToSlope() * d)
+                .ToArray();
 
             DA.SetDataList(0, ll);
             DA.SetDataList(1, a);
@@ -139,7 +141,7 @@ namespace Lt.GHComponent.Analysis
             C.Value = new Color[Dll.Count][];
             for (int i = 0; i < Dll.Count; i++)
             {
-                Interval interval = GI.Def ? itl[i].Value : Ty.A0(UD.Def);
+                Interval interval = GI.Def ? itl[i].Value : Const.A0(UD.Def);
                 C.Value[i] = Dll[i].Select(t => Dou2Col(interval, t)).ToArray();
             }
         }

@@ -14,6 +14,9 @@ using System.Windows.Forms;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 using Grasshopper.Kernel.Attributes;
+using Lt.Base;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -29,7 +32,7 @@ namespace Lt.GHComponent.Analysis
             "分析",
             ID.LTRW, 3, LTResource.实时山路绘制反馈)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = false;
             GH = new MGradientMenuItem(this, GH_GradientControl.GradientPresets[1].Duplicate(), "高程渐变(&H)");
             GI = new MBooleanMenuItem(this, false, "自适应角度(&A)", mf: m => m.Def ? "自适应" : "0-上限");
@@ -72,12 +75,12 @@ namespace Lt.GHComponent.Analysis
                 || !DA.GetData(2, ref p)
                 || p <= 0)
                 return;
-            if (Ty.L < 0)
+            if (Const.RoadLayerIndex < 0)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "road图层不存在。可双击本电池图标来建立，并设为当前");
                 return;
             }
-            Settings.LayerIndexFilter = Ty.L;
+            Settings.LayerIndexFilter = Const.RoadLayerIndex;
 
             HL = Math.Atan(1 / p);//计算坡度上限
 
@@ -113,22 +116,17 @@ namespace Lt.GHComponent.Analysis
                     if (t3 == null)//剔除不在网格上的点
                         continue;
                     slaa[i] = new Polyline(t3).GetSegments();
-                    if (Ty.Paral)//尝试使用多核
-                        sdaa[i] = slaa[i].AsParallel().Select(t =>
-                        {
-                            Vector3d v = t.Direction;//直线转对应向量
-                            v.Unitize();
-                            return v.向量转坡度();//向量转坡度(度)
-                        }
-                        ).ToArray();
+                    if (Const.Paral)//尝试使用多核
+                        sdaa[i] = slaa[i].AsParallel()
+                            .Select(t => t.Direction//直线转对应向量
+                                .ToUnitize()
+                                .VectorToSlope())
+                            .ToArray();
                     else
-                        sdaa[i] = slaa[i].Select(t =>
-                        {
-                            Vector3d v = t.Direction;//直线转对应向量
-                            v.Unitize();
-                            return v.向量转坡度();//向量转坡度(度)
-                        }
-                        ).ToArray();
+                        sdaa[i] = slaa[i].Select(t => t.Direction//直线转对应向量
+                                .ToUnitize()
+                                .VectorToSlope())
+                            .ToArray();
 
                     List<int> ill = new List<int>(5);
                     for (int j = 0; j < sdaa[i].Length; j++)
@@ -323,9 +321,9 @@ namespace Lt.GHComponent.Analysis
         {
             if (e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation) && Owner is LTRW)
             {
-                if (Ty.L < 0)//不存在图层则创建
+                if (Const.RoadLayerIndex < 0)//不存在图层则创建
                     RhinoDoc.ActiveDoc.Layers.Add("road", Color.Black);
-                RhinoDoc.ActiveDoc.Layers.SetCurrentLayerIndex(Ty.L, true);//图层设为当前
+                RhinoDoc.ActiveDoc.Layers.SetCurrentLayerIndex(Const.RoadLayerIndex, true);//图层设为当前
             }
 
             return GH_ObjectResponse.Handled;

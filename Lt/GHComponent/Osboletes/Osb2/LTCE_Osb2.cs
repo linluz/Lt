@@ -1,4 +1,5 @@
-﻿using Lt.GHComponent.Analysis;
+﻿using Lt.Base;
+using Lt.GHComponent.Analysis;
 using Lt.Majas;
 
 namespace Lt.GHComponent.Osboletes.Osb2
@@ -13,7 +14,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
             "分析",
             ID.LTCE_Osb2, nameof(LTCE), LTResource.等高线高程分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)

@@ -4,6 +4,9 @@ using Grasshopper.Kernel;
 using Lt.Majas;
 using Rhino.Geometry;
 using System.Windows.Forms;
+using Lt.Base;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -19,7 +22,7 @@ namespace Lt.GHComponent.Analysis
             "分析",
             ID.LTMG, 1, LTResource.山体坡度分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
             GI = new MBooleanMenuItem(this, true, "自适应范围(&A)", true, mf: m => m.Def ? "自适应" : "0-90°");
             UD = new MBooleanMenuItem(this, true, "使用角度(&U)", true, mf: m => m.Def ? "角度" : "弧度");
@@ -33,8 +36,7 @@ namespace Lt.GHComponent.Analysis
         }
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            var tm = new Mesh();
-            if (!DA.GetData(0, ref tm))
+            if (!DA.OutDataC(0, out Mesh tm))
                 return;
             if (tm.Normals.Count != tm.Vertices.Count)
                 tm.Normals.ComputeNormals();//计算法向
@@ -45,7 +47,7 @@ namespace Lt.GHComponent.Analysis
 
 
             var ia = ra.ToInterval();//获取角度范围
-            Interval ib = GI.Def ? ia : Ty.A0(UD.Def);//着色范围
+            Interval ib = GI.Def ? ia : Const.A0(UD.Def);//着色范围
             //角度转换为色彩并给予网格
             tm.VertexColors.AppendColors(ra.Select(t => Dou2Col(ib, t)).ToArray());
             DA.SetData(0, tm);
@@ -65,7 +67,7 @@ namespace Lt.GHComponent.Analysis
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || Hidden || !args.Display.SupportsShading)
                 return; ///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(0, this, args);
+            args.Draw1Meshes(0, this);
         }
 
         private MBooleanMenuItem GI;

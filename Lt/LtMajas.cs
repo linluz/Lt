@@ -1,156 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper;
+using Grasshopper.GUI;
+using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI.Gradient;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Expressions;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
-using Rhino.Geometry;
-using Rhino.DocObjects;
-using Rhino;
-using System.Reflection;
-using Grasshopper.GUI;
 using Rhino.Display;
-using Grasshopper.Kernel.Expressions;
-using System.Drawing.Drawing2D;
-using Grasshopper.GUI.Canvas;
+using Rhino.Geometry;
 using static Lt.Majas.MComponent;
 
-// ReSharper disable UnusedMember.Global
 namespace Lt.Majas
 {
-    #region lt
-    /// <summary>
-    /// 通用
-    /// </summary>
-    public static class Ty
-    {
-#if DEBUG
-        /// <summary>
-        /// y向移动曲线2000单位，测试使用，方便linq使用
-        /// </summary>
-        /// <param name="c"></param>
-        /// <returns></returns>
-        public static Curve Move(this Curve c)
-        {
-            c.Translate(0, 2000, 0);
-            return c;
-        }
-#endif
-
-        /// <summary>
-        /// 绘制预览网格，（仅未被选中时显示伪色），用于重写DrawViewportMeshes内
-        /// </summary>
-        /// <param name="a">输出端索引</param>
-        /// <param name="component">电池本体，默认输入this</param>
-        /// <param name="args">预览变量，默认输入 args</param>
-        public static void Draw1Meshes(int a, IGH_Component component, IGH_PreviewArgs args)
-        {
-            var lmesh = component.Params.Output[a].VolatileData.AllData(true).Select(t => ((GH_Mesh)t).Value).ToList();
-            if (lmesh.Count == 0) return; ///避免网格不存在
-            bool set = component.Attributes.GetTopLevel.Selected;
-            GH_PreviewMeshArgs args2 = new GH_PreviewMeshArgs(args.Viewport, args.Display,
-                set ? args.ShadeMaterial_Selected : args.ShadeMaterial, args.MeshingParameters);
-            foreach (Mesh mesh in lmesh)
-                if (mesh.VertexColors.Count > 0)
-                    args2.Pipeline.DrawMeshFalseColors(mesh);
-                else
-                    args2.Pipeline.DrawMeshShaded(mesh, args2.Material);
-        }
-        public static void BakeColorGroup<T>(this RhinoDoc doc, List<List<T>> l, Color co, string groupname, ObjectAttributes att, List<Guid> obj_ids)
-            where T : IGH_Goo, IGH_BakeAwareData
-        {
-            foreach (var l0 in l)
-            {
-                if (l0.Count == 0 || co.IsEmpty) return;
-                ObjectAttributes oa = att.Duplicate();
-                int groupIndex = doc.Groups.Add(groupname);
-                oa.AddToGroup(groupIndex);
-                oa.ColorSource = ObjectColorSource.ColorFromObject;
-                oa.ObjectColor = co;
-                foreach (T c in l0.Where(c => c.IsValid))
-                {
-                    c.BakeGeometry(doc, oa, out Guid id);
-                    obj_ids.Add(id);
-                }
-            }
-        }
-        /// <summary>
-        /// 将向量转换成坡度
-        /// </summary>
-        /// <param name="t">向量</param>
-        /// <returns>转换后的弧度</returns>
-        public static double 向量转坡度(this Vector3d t) => Math.Asin(t.Z < 0 ? -t.Z : t.Z);
-        /// <summary>
-        /// 默认渐变
-        /// </summary>
-        internal static GH_Gradient Gradient0 = new GH_Gradient(
-            new[] { 0, 0.2, 0.4, 0.6, 0.8, 1 },
-            new[]
-            {
-                Color.FromArgb(45, 51, 87),
-                Color.FromArgb(75, 107, 169),
-                Color.FromArgb(173, 203, 249),
-                Color.FromArgb(254, 244, 84),
-                Color.FromArgb(234, 126, 0),
-                Color.FromArgb(237, 53, 17)
-            });
-        /// <summary>
-        /// road图层的索引，-1为不存在
-        /// </summary>
-        internal static int L => RhinoDoc.ActiveDoc.Layers.Find("road", true);
-
-        /// <summary>
-        /// 0-90区间
-        /// </summary>
-        internal static Interval A0(bool usedegrees = true)
-            => new Interval(0, usedegrees ? 90 : Math.PI / 2);
-        internal static readonly bool Paral = Environment.ProcessorCount > 1;
-    }
-
-    #region AComponent
-    public abstract class AComponent : MComponent
-    {
-        protected AComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
-            base(name, nickname, description, "Lt", subCategory, id, exposure, icon)
-        { }
-    }
-    public abstract class ADCComponent : MDCComponent
-    {
-        protected ADCComponent(string name, string nickname, string description, string subCategory, string id, int exposure = 1, Bitmap icon = null) :
-            base(name, nickname, description, "Lt", subCategory, id, exposure, icon)
-        { }
-    }
-    public abstract class GradientComponent : AComponent
-    {
-        protected GradientComponent(string name, string nickname, string description, string subCategory, string id,
-            int exposure = 1, Bitmap icon = null) :
-            base(name, nickname, description, subCategory, id, exposure, icon)
-        {
-            Gra = new MGradientMenuItem(this, GH_Gradient.GreyScale(), "渐变(&G)");
-        }
-
-        protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
-        {
-            Menu_Gradient(menu, ref Gra,
-                "左小右大，\r\n若修改后预览无变化，请重计算本电池,并告知开发者修复\r\n要新增预设，请依靠【渐变】电池制作渐变并使用其右键菜单项\r\n【添加当前渐变Add Current Gradient】");
-        }
-
-        protected Color Dou2Col(Interval it, double v)
-            => Gra.Def.Double2GraColor(it, v, Gra.Rev);
-        protected MGradientMenuItem Gra;
-    }
-    #endregion
-    #endregion
     #region MenuItemClass
     public abstract class MMenuItem<T>
     {
@@ -2010,17 +1884,17 @@ namespace Lt.Majas
         public abstract MBooleanMenuItem DoubleClick { get; }
     }
 
-    public interface IMCom_DoubleClick
+    public interface IMCom_DoubleClick: IGH_Component
     {
         MBooleanMenuItem DoubleClick { get; }
-        void CreateAttributes();
+        new void CreateAttributes();
     }
     /// <summary>
     /// 双击切换_属性，对应电池必须实现IMCom_DoubleClick
     /// </summary>
     public sealed class DoubleClick_Attributes : GH_ComponentAttributes
     {
-        public DoubleClick_Attributes(IGH_Component component) : base(component) { }
+        public DoubleClick_Attributes(IMCom_DoubleClick component) : base(component) { }
 
         public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
         {
@@ -2139,14 +2013,56 @@ namespace Lt.Majas
             a.Description += s.ToString();
             return a;
         }
-        public static bool GetDataM<T>(this IGH_DataAccess da, int index, out T destination)
+        /// <summary>
+        /// 按索引获取类型数据
+        /// </summary>
+        /// <typeparam name="T">解构类型</typeparam>
+        /// <param name="da">数据获取源</param>
+        /// <param name="index">索引</param>
+        /// <param name="destination">获取的数据</param>
+        /// <param name="desT">默认值,引用类型时必须给予非null的初始值</param>
+        /// <returns>能否获取</returns>
+        public static bool OutData<T>(this IGH_DataAccess da, int index, out T destination, T desT = default)
+        {
+            if (desT == null)
+                throw new ArgumentException(
+                    $"获取的数据类型为引用类型时，{nameof(desT)}参数必须有非null的输入。或请改为使用方法{nameof(OutDataC)}");
+            T d = desT;
+            var b = da.GetData(index, ref d);
+            destination = d;
+            return b;
+        }
+        /// <summary>
+        /// 按索引获取类型为结构的数据
+        /// </summary>
+        /// <typeparam name="T">解构类型</typeparam>
+        /// <param name="da">数据获取源</param>
+        /// <param name="index">索引</param>
+        /// <param name="destination">获取的数据</param>
+        /// <returns>能否获取</returns>
+        public static bool OutDataS<T>(this IGH_DataAccess da, int index, out T destination) where T:struct
         {
             T d = default;
             var b = da.GetData(index, ref d);
             destination = d;
             return b;
         }
-        public static bool GetDataListM<T>(this IGH_DataAccess da, int index, out List<T> destination)
+        /// <summary>
+        /// 按索引获取类型为结构的数据
+        /// </summary>
+        /// <typeparam name="T">引用类型</typeparam>
+        /// <param name="da">数据获取源</param>
+        /// <param name="index">索引</param>
+        /// <param name="destination">获取的数据</param>
+        /// <returns>能否获取</returns>
+        public static bool OutDataC<T>(this IGH_DataAccess da, int index, out T destination) where T : new()
+        {
+            var d = new T();
+            var b = da.GetData(index, ref d);
+            destination = d;
+            return b;
+        }
+        public static bool OutDataList<T>(this IGH_DataAccess da, int index, out List<T> destination)
         {
             List<T> d = new List<T>();
             var b = da.GetDataList(index, d);
@@ -2247,7 +2163,7 @@ namespace Lt.Majas
         }
         public static GH_Gradient Duplicate(this GH_Gradient g1)
         {
-            GH_Gradient g0 = new GH_Gradient
+            var g0 = new GH_Gradient
             {
                 Linear = g1.Linear,
                 Locked = g1.Locked
@@ -2257,8 +2173,13 @@ namespace Lt.Majas
             return g0;
         }
         #endregion
-
+        /// <summary>
+        /// 弧度转角度常量
+        /// </summary>
         public const double R2A = 57.295779513082323;
+        /// <summary>
+        /// 角度转弧度常量
+        /// </summary>
         public const double A2R = 0.017453292519943295;
     }
 }

@@ -1,4 +1,5 @@
-﻿using Lt.GHComponent.Analysis;
+﻿using Lt.Base;
+using Lt.GHComponent.Analysis;
 using Lt.GHComponent.Osboletes;
 using Lt.Majas;
 
@@ -14,7 +15,7 @@ namespace Lt.Osbolete.Osb2
             "分析",
             ID.LTME_Osb2, nameof(LTME), icon: LTResource.山体高程分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)

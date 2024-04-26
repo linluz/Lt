@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using Lt.Base;
 using Lt.GHComponent.Analysis;
 using Lt.Majas;
 
@@ -14,7 +15,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
             "分析",
             ID.LTSA, nameof(LTRA), LTResource.山路坡度分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
             GI = new MBooleanMenuItem(this, true, "自适应角度(&A)",rw:false);
         }

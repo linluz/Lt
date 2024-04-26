@@ -1,5 +1,8 @@
 ﻿using System;
 using Grasshopper.Kernel;
+using Lt.Base;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 using Lt.Majas;
 using Rhino.Geometry;
 
@@ -15,9 +18,9 @@ namespace Lt.GHComponent.Analysis
         public LTME() : base("高程分析(网格)", "LTME",
             "山地地形高程分析",
             "分析",
-            ID.LTME, 1, icon: LTResource.山体高程分析)
+            ID.LTME, icon: LTResource.山体高程分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)
@@ -47,7 +50,7 @@ namespace Lt.GHComponent.Analysis
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || Hidden || !args.Display.SupportsShading)
                 return; ///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(0, this, args);
+            args.Draw1Meshes(0, this);
         }
     }
 }

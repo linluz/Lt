@@ -10,6 +10,9 @@ using Rhino.Display;
 using Rhino.Geometry.Intersect;
 using Rhino.Geometry;
 using System.Windows.Forms;
+using Lt.Base;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -35,7 +38,7 @@ namespace Lt.GHComponent.Analysis
             SolutionExpired += (s, e) => Mesh0.Clear();
             Mesh0 = new Update<Mesh>(() =>
             {
-                Mesh0.Value = Ty.Paral
+                Mesh0.Value = Const.Paral
                     ? GetOutByItem<GH_Point>(0).AsParallel() //获取可见点数据
                         .Aggregate(new Mesh(), SphereAppend)
                     : GetOutByItem<GH_Point>(0) //获取可见点数据
@@ -55,16 +58,11 @@ namespace Lt.GHComponent.Analysis
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-
-            var tm = new Mesh();
-            List<Brep> o = new List<Brep>(3);
-            List<Point3d> pl = new List<Point3d>();
-            int a = 0;
-            if (!DA.GetData(0, ref tm) && !tm.IsValid
-                || !DA.GetDataList(2, pl)
-                || !DA.GetData(3, ref a))
+            if (!DA.OutDataC(0, out Mesh tm) && !tm.IsValid
+                || !DA.OutDataList(2, out List<Point3d> pl)
+                || !DA.OutData(3, out int a))
                 return;
-            DA.GetDataList(1, o);
+            DA.OutDataList(1, out List<Brep> o);
             var om = o.Select(t =>
                 Mesh.CreateFromBrep(t)
                     .Aggregate(new Mesh(), (c, t0) => c.AppendMesh(t0)))
@@ -83,11 +81,11 @@ namespace Lt.GHComponent.Analysis
                     grid0[ix * ry + iy] = new Point3d(mb.Min.X + ix * a, mb.Min.Y + iy * a, mb.Min.Z);
 
             var eh = new Vector3d(0, 0, EyeHight.Def);//眼高向量
-            if (Ty.Paral)
+            if (Const.Paral)
             {
                 pt = pl.AsParallel()
                     .Select(ProjectZ)//将观测点投影到地形网格上
-                    .Where(t => t != Point3d.Unset) 
+                    .Where(t => t != Point3d.Unset)
                     .Select(t => t + eh)//增加眼高
                     .ToArray();
 
@@ -166,7 +164,7 @@ namespace Lt.GHComponent.Analysis
                     args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeO.Def), ColorO.Def, args.DefaultCurveThickness));
 
                 Color ccc = Attributes.Selected ? args.WireColour_Selected : ColorV.Def;
-                if (Ty.Paral)
+                if (Const.Paral)
                 {
                     Parallel.ForEach(GetOutByItem<GH_Point>(1), t =>
                         args.Display.DrawCircle(new Circle(worldXY, t.Value, SizeV.Def), ccc, args.DefaultCurveThickness));
@@ -178,8 +176,8 @@ namespace Lt.GHComponent.Analysis
             if (!Ov.Def) return;
             //绘制障碍物
             GH_PreviewWireArgs pwa = ToPreviewWireArgs(args, Color.FromArgb(Oc.Def.R, Oc.Def.B, Oc.Def.G));
-           
-            GetIntByItem<GH_Brep>(1).ForEach(t=> t.DrawViewportWires(pwa));
+
+            GetIntByItem<GH_Brep>(1).ForEach(t => t.DrawViewportWires(pwa));
         }
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)

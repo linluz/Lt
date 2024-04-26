@@ -9,6 +9,8 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Rhino;
 using System.Windows.Forms;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 
 namespace Lt.GHComponent.Analysis
 {

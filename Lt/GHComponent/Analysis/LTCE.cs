@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel;
+using Lt.Base;
+using Lt.Base.Component;
 using Lt.Majas;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -22,7 +24,7 @@ namespace Lt.GHComponent.Analysis
             "分析",
             ID.LTCE, 2, LTResource.等高线高程分析)
         {
-            Gra.Def = Ty.Gradient0.Duplicate();
+            Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
         }
         protected override void AddParameter(ParamManager pm)

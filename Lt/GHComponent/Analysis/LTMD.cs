@@ -6,6 +6,8 @@ using Grasshopper.Kernel;
 using Lt.Majas;
 using Rhino.Geometry;
 using System.Windows.Forms;
+using Lt.Base.Component;
+using Lt.Base.Extensions;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -123,7 +125,7 @@ namespace Lt.GHComponent.Analysis
         {
             if (args.Document.PreviewMode != GH_PreviewMode.Shaded || Hidden || !args.Display.SupportsShading)
                 return; ///跳过非着色模式和，或参数不支持预览
-            Ty.Draw1Meshes(0, this, args);
+            args.Draw1Meshes(0, this);
         }
 
         public int DShade(Vector3f v)
