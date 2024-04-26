@@ -4,6 +4,7 @@ using GH_IO.Serialization;
 using Grasshopper.GUI.Gradient;
 using Lt.GHComponent.Analysis;
 using Lt.Majas;
+using ID = Lt.Base.ID;
 
 
 namespace Lt.GHComponent.Osboletes.Osb2

@@ -5,6 +5,7 @@ using Grasshopper.Kernel;
 using Lt.Majas;
 using Rhino.Geometry;
 using System.Windows.Forms;
+using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
 

@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using GH_IO.Serialization;
 using Lt.GHComponent.Analysis;
 using Lt.Majas;
+using ID = Lt.Base.ID;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {
