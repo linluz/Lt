@@ -41,12 +41,9 @@ namespace Lt.GHComponent.Analysis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 输入输出变量初始化
-            List<Curve> c = new List<Curve>(2);
-            int e = 0;
-            bool f = false;
-            if (!DA.GetDataList(0, c)
-                || !DA.GetData(1, ref e)
-                || !DA.GetData(2, ref f))
+            if (!DA.OutDataList(0, out List<Curve> c)
+                || !DA.OutData(1, out int e)
+                || !DA.OutData(2, out bool f))
                 return;
             #endregion
             var ep = new Plane(new Point3d(0, 0, e), new Vector3d(0, 0, 1));
@@ -67,17 +64,19 @@ namespace Lt.GHComponent.Analysis
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
             if (Locked || args.Document.PreviewMode == GH_PreviewMode.Disabled) return; //跳过锁定或非线框模式
-
             bool set = Attributes.GetTopLevel.Selected;
             if (!UpColor.Def.IsEmpty)
+            {
+                Color col = set ? args.WireColour_Selected : UpColor.Def;
                 foreach (GH_Curve l1 in GetOutByItem<GH_Curve>(0).Where(l1 => l1.IsValid))
-                    args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : UpColor.Def);
-
-            if (!DownColor.Def.IsEmpty) return;
+                    args.Display.DrawCurve(l1.Value, col);
+            }
+            //bug 测试淹没线是否正常
             if (!DownColor.Def.IsEmpty)
             {
+                Color col = set ? args.WireColour_Selected : DownColor.Def;
                 foreach (GH_Curve l1 in GetOutByItem<GH_Curve>(1).Where(l1 => l1.IsValid))
-                    args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : DownColor.Def);
+                    args.Display.DrawCurve(l1.Value, col);
             }
         }
         public override void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)

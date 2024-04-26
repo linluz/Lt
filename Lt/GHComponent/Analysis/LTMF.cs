@@ -51,12 +51,9 @@ namespace Lt.GHComponent.Analysis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 初始化 获取输入
-            var t0 = new Mesh();
-            double e0 = 0;
-            bool f = false;
-            if (!DA.GetData(0, ref t0)
-                || !DA.GetData(1, ref e0)
-                || !DA.GetData(2, ref f))
+            if (!DA.OutDataC(0, out Mesh  t0)
+                || !DA.OutData(1, out double e0)
+                || !DA.OutData(2, out bool f))
                 return;
             #endregion
 

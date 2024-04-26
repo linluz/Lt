@@ -37,8 +37,7 @@ namespace Lt.GHComponent.Analysis
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            List<GH_Curve> g = new List<GH_Curve>(3);
-            if (!DA.GetDataList(0, g)) return;
+            if (!DA.OutDataList(0,out List<GH_Curve> g)) return;
             var cd = g.Select(ci => ci.Value.PointAtEnd.Z).ToArray();
             var r = cd.ToInterval();
 

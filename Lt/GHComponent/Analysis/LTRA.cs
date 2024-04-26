@@ -52,10 +52,9 @@ namespace Lt.GHComponent.Analysis
                 Dll = new List<List<double>>(5);
             }
             #region 输入输出变量初始化
-            List<Curve> cl = new List<Curve>(0);
-            int e = 0;
-            if (!DA.GetDataList(0, cl) || cl.Count == 0
-                || !DA.GetData(1, ref e))
+            if (!DA.OutDataList(0, out List<Curve> cl) 
+                || cl.Count == 0
+                || !DA.OutData(1, out int e))
                 return;
             #endregion
 

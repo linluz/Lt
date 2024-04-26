@@ -39,16 +39,11 @@ namespace Lt.GHComponent.Basis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 初始化 获取输入
-            Curve b = new PolyCurve();
-            double r = 0;
-            double d = 0;
-            double l = 0;
-            int s = 0;
-            if (!DA.GetData(0, ref b) || RMNoValid(b, 0) || RMNoClosed(b, 0) || RNNoPlanar(b, 0) || //获取线框，并检测闭合与平面
-                !DA.GetData(1, ref r) || RMSmaller(r, 0, 1, equal: true) ||
-                !DA.GetData(2, ref d) || RMSmaller(d, 0, 2, equal: true) ||
-                !DA.GetData(3, ref l) || RMSmaller(l, 0, 3, equal: true) ||
-                !DA.GetData(4, ref s)) return;
+            if (!DA.OutData(0, out Curve b, new PolyCurve()) || RMNoValid(b, 0) || RMNoClosed(b, 0) || RNNoPlanar(b, 0) || //获取线框，并检测闭合与平面
+                !DA.OutData(1, out double r) || RMSmaller(r, 0, 1, equal: true) ||
+                !DA.OutData(2, out double d) || RMSmaller(d, 0, 2, equal: true) ||
+                !DA.OutData(3, out double l) || RMSmaller(l, 0, 3, equal: true) ||
+                !DA.OutData(4, out int s)) return;
             #endregion
 
             var TreeArea = r * r * Math.PI;

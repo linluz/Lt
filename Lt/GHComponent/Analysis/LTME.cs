@@ -33,8 +33,7 @@ namespace Lt.GHComponent.Analysis
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            var tm = new Mesh();
-            if (!DA.GetData(0, ref tm))
+            if (!DA.OutDataC(0, out Mesh tm))
                 return;
             BoundingBox b = tm.GetBoundingBox(false);
             var ie = new Interval(b.Min.Z, b.Max.Z);

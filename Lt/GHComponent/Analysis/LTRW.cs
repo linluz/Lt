@@ -64,15 +64,12 @@ namespace Lt.GHComponent.Analysis
                 return;
             }
 
-            List<Mesh> m = new List<Mesh>(0);
-            int e = 0;
-            double p = 0;
-            if (!DA.GetDataList(0, m)
+            if (!DA.OutDataList(0, out List<Mesh> m)
                 || m.Count == 0
                 || !m.All(t => t.IsValid)
-                || !DA.GetData(1, ref e)
+                || !DA.OutData(1, out int e)
                 || e <= 0
-                || !DA.GetData(2, ref p)
+                || !DA.OutData(2, out double p)
                 || p <= 0)
                 return;
             if (Const.RoadLayerIndex < 0)

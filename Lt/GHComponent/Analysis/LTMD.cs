@@ -53,10 +53,8 @@ namespace Lt.GHComponent.Analysis
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             #region 初始化 获取输入
-            Mesh m = new Mesh();
-            List<Color> c = new List<Color>(9);
-            if (!DA.GetData(0, ref m)
-                || !DA.GetDataList(1, c))
+            if (!DA.OutDataC(0, out Mesh m)
+                || !DA.OutDataList(1, out List<Color> c))
                 return;
             if (c.Count != 9)
             {
