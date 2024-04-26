@@ -74,6 +74,7 @@ namespace Lt.GHComponent.Analysis
                     args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : UpColor.Def);
 
             if (!DownColor.Def.IsEmpty) return;
+            if (!DownColor.Def.IsEmpty)
             {
                 foreach (GH_Curve l1 in GetOutByItem<GH_Curve>(1).Where(l1 => l1.IsValid))
                     args.Display.DrawCurve(l1.Value, set ? args.WireColour_Selected : DownColor.Def);
