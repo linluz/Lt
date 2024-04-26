@@ -9,7 +9,7 @@ namespace Lt.GHComponent.Osboletes.Osb1
     // ReSharper disable once UnusedMember.Global
     public sealed class LTTE : AOComponent
     {
-        public LTTE() : base("高程分析", "LTTE", "分析", ID.LTME_Osb, nameof(LTME), LTResource.山体高程分析)
+        public LTTE() : base("高程分析", "LTTE", "分析", ComponentID.LTME_Osb, nameof(LTME), LTResource.山体高程分析)
         { }
         protected override void AddParameter(ParamManager pm)
         {

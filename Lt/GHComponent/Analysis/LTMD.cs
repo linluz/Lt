@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -25,7 +26,7 @@ namespace Lt.GHComponent.Analysis
                 "\r\n注意：顶点着色会焊接网格顶点，可能导致顶点减少，" +
                 "\r\n面着色会把面的每个顶点都解离出来，可能会导致顶点增加",
                 "分析",
-                ID.LTMD, 1, LTResource.山体坡向分析)
+                ComponentID.LTMD, 1, LTResource.山体坡向分析)
         {
             Shade = new MBooleanMenuItem(this, true, "使用面着色(&F)", true,
                 mf: m => m.Def ? "面着色" : "顶点着色");

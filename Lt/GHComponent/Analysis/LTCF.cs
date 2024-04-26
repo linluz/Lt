@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel;
-using Lt.Majas;
-using Rhino.DocObjects;
-using Rhino.Geometry;
-using Rhino;
 using System.Windows.Forms;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas;
+using Lt.Majas.MenuItemClass;
+using Rhino;
+using Rhino.DocObjects;
+using Rhino.Geometry;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -25,7 +26,7 @@ namespace Lt.GHComponent.Analysis
         public LTCF() : base("淹没分析(等高线)", "LTCF",
             "通过等高线数据分析地形的淹没情况。\r\n烘焙：已着色已群组淹没/未淹曲线",
             "分析",
-            ID.LTCF, 2, LTResource.等高线淹没分析)
+            ComponentID.LTCF, 2, LTResource.等高线淹没分析)
         {
             UpColor = new MColorMenuItem(this, Color.White, "未淹色彩(&U)");
             DownColor = new MColorMenuItem(this, Color.FromArgb(59, 104, 156), "淹没色彩(&F)");
@@ -72,7 +73,6 @@ namespace Lt.GHComponent.Analysis
                 foreach (GH_Curve l1 in GetOutByItem<GH_Curve>(0).Where(l1 => l1.IsValid))
                     args.Display.DrawCurve(l1.Value, col);
             }
-            //bug 测试淹没线是否正常
             if (!DownColor.Def.IsEmpty)
             {
                 Color col = set ? args.WireColour_Selected : DownColor.Def;

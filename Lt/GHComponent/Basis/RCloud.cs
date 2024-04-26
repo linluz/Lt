@@ -19,7 +19,7 @@ namespace Lt.GHComponent.Basis
             "云线", "RCloud",
             "拾取基础线框自动生成云线,可一次拾取多根线框",
              "基础",
-            ID.RCloud, 1, LTResource.云线)
+            ComponentID.RCloud, 1, LTResource.云线)
         { }
         //AddIntegerParameter 和 item 都成变量
 

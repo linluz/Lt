@@ -11,7 +11,7 @@ namespace Lt.GHComponent.Osboletes.Osb1
     public sealed class LTFT : AOComponent
     {
         public LTFT() :
-            base("地形网格淹没分析", "LTFT", "分析", ID.LTMF_Osb, nameof(LTMF), LTResource.山体淹没分析)
+            base("地形网格淹没分析", "LTFT", "分析", ComponentID.LTMF_Osb, nameof(LTMF), LTResource.山体淹没分析)
         { }
 
         protected override void AddParameter(ParamManager pm)

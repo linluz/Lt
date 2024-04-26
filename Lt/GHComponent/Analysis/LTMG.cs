@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -20,7 +21,7 @@ namespace Lt.GHComponent.Analysis
         public LTMG() : base("坡度分析(网格)", "LTMG",
             "山地地形坡度分析,\r\n双击：【坡度范围】切换为角度/弧度",
             "分析",
-            ID.LTMG, 1, LTResource.山体坡度分析)
+            ComponentID.LTMG, 1, LTResource.山体坡度分析)
         {
             Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;

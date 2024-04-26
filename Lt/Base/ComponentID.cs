@@ -1,6 +1,6 @@
 ﻿namespace Lt.Base
 {
-    public static class ID
+    public static class ComponentID
     {
         internal const string LTMF_Osb = "84474303-59cb-4248-9015-c5a02098fd99";
         internal const string LTMG_Osb = "6c33fb8b-9da6-4688-8a1b-d0363350d176";

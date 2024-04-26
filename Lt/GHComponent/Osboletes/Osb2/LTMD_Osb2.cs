@@ -2,8 +2,8 @@
 using System.Windows.Forms;
 using GH_IO.Serialization;
 using Lt.GHComponent.Analysis;
-using Lt.Majas;
-using ID = Lt.Base.ID;
+using Lt.Majas.MenuItemClass;
+using Lt.Base;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {
@@ -13,7 +13,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
         public LTMD_Osb2()
             : base("坡向分析(网格)", "LTMD",
                 "分析",
-                ID.LTMD_Osb2, nameof(LTMD), LTResource.山体坡向分析)
+                ComponentID.LTMD_Osb2, nameof(LTMD), LTResource.山体坡向分析)
         {
             Shade = new MBooleanMenuItem(this, true, "使用面着色(&F)", true, rw: false);
         }

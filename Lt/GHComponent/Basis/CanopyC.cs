@@ -7,6 +7,7 @@ using Grasshopper.Kernel.Types;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Majas;
+using Lt.Majas.MenuItemClass;
 using Rhino.Geometry;
 
 namespace Lt.GHComponent.Basis
@@ -23,7 +24,7 @@ namespace Lt.GHComponent.Basis
             "林冠线", "CanopyC",
             "通过轮廓曲线来生成林冠线",
             "基础",
-            ID.CanopyC, 1, LTResource.林冠线)
+            ComponentID.CanopyC, 1, LTResource.林冠线)
         {
             Restrict = new MBooleanMenuItem(this, false, "轮廓限制(&B)", true, mf: m => m.Def ? "限制树心" : "限制树冠");
         }

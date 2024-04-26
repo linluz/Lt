@@ -3,8 +3,8 @@ using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper.GUI.Gradient;
 using Lt.GHComponent.Analysis;
-using Lt.Majas;
-using ID = Lt.Base.ID;
+using Lt.Majas.MenuItemClass;
+using Lt.Base;
 
 
 namespace Lt.GHComponent.Osboletes.Osb2
@@ -18,7 +18,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
         public LTMF_Osb2() : base(
             "淹没分析(网格)", "LTMF",
             "分析",
-            ID.LTMF_Osb2, nameof(LTMF), LTResource.山体淹没分析)
+            ComponentID.LTMF_Osb2, nameof(LTMF), LTResource.山体淹没分析)
         {
             Gra.Def = new GH_Gradient(
                 new[] { 0, 0.16, 0.33, 0.5, 0.67, 0.84, 1 },

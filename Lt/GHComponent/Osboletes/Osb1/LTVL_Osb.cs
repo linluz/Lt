@@ -9,7 +9,7 @@ namespace Lt.GHComponent.Osboletes.Osb1
     // ReSharper disable once UnusedMember.Global
     public sealed class LTVL_Osb : AOComponent
     {
-        public LTVL_Osb() : base("视线分析", "LTVL", "分析", ID.LTVL_Osb, nameof(LTVL), LTResource.视线分析)
+        public LTVL_Osb() : base("视线分析", "LTVL", "分析", ComponentID.LTVL_Osb, nameof(LTVL), LTResource.视线分析)
         { }
         protected override void AddParameter(ParamManager pm)
         {

@@ -10,7 +10,7 @@ namespace Lt.GHComponent.Osboletes.Osb1
     // ReSharper disable once UnusedMember.Global
     public sealed class LTCF_Osb : AOComponent
     {
-        public LTCF_Osb() : base("等高线淹没分析", "LTCE", "分析", ID.LTCF_Osb, nameof(LTCF), LTResource.等高线淹没分析) { }
+        public LTCF_Osb() : base("等高线淹没分析", "LTCE", "分析", ComponentID.LTCF_Osb, nameof(LTCF), LTResource.等高线淹没分析) { }
         protected override void AddParameter(ParamManager pm)
         {
             pm.AddIP(ParT.Curve, "等高线", "C", "要进行淹没分析的等高线", ParamTrait.List);

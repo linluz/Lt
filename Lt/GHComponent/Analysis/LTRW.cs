@@ -2,21 +2,22 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Windows.Forms;
+using Grasshopper.GUI;
+using Grasshopper.GUI.Canvas;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel;
-using Lt.Majas;
-using Rhino.DocObjects;
-using Rhino.Geometry.Intersect;
-using Rhino.Geometry;
-using Rhino;
-using System.Windows.Forms;
-using Grasshopper.GUI.Canvas;
-using Grasshopper.GUI;
-using Grasshopper.Kernel.Attributes;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas;
+using Lt.Majas.MenuItemClass;
+using Rhino;
+using Rhino.DocObjects;
+using Rhino.Geometry;
+using Rhino.Geometry.Intersect;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -30,7 +31,7 @@ namespace Lt.GHComponent.Analysis
             "实时反馈所绘制的山路坡度是否合理，\r\n不合理的区域用提示圆标注出来。" +
             "\r\n注意:绘制需要在top视图【road】图层内。\r\n双击：自动建立【road】图层并切换为当前图层。\r\n烘焙：已按输入线成组已着色直线段",
             "分析",
-            ID.LTRW, 3, LTResource.实时山路绘制反馈)
+            ComponentID.LTRW, 3, LTResource.实时山路绘制反馈)
         {
             Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = false;

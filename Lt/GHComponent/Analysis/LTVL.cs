@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
-using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel;
-using Lt.Majas;
-using Rhino.Display;
-using Rhino.Geometry.Intersect;
-using Rhino.Geometry;
 using System.Windows.Forms;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas;
+using Lt.Majas.MenuItemClass;
+using Rhino.Display;
+using Rhino.Geometry;
+using Rhino.Geometry.Intersect;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -26,7 +27,7 @@ namespace Lt.GHComponent.Analysis
         public LTVL() : base("视线分析", "LTVL",
             "分析在山地某处的可见范围,cpu线程数大于1时自动调用多核计算",
             "分析",
-            ID.LTVL, 4, LTResource.视线分析)
+            ComponentID.LTVL, 4, LTResource.视线分析)
         {
             ColorO = new MColorMenuItem(this, Color.Red, "观察点色彩(&C)");
             SizeO = new MDoubleMenuItem(this, 10, "观察点尺寸(&S)");

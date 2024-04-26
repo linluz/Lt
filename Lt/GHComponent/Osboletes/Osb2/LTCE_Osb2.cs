@@ -12,7 +12,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
     {
         public LTCE_Osb2() : base("高程分析(等高线)", "LTCE",
             "分析",
-            ID.LTCE_Osb2, nameof(LTCE), LTResource.等高线高程分析)
+            ComponentID.LTCE_Osb2, nameof(LTCE), LTResource.等高线高程分析)
         {
             Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;

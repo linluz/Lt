@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -23,7 +24,7 @@ namespace Lt.GHComponent.Analysis
             "淹没分析(网格)", "LTMF",
             "分析被水淹没后的地形状态",
             "分析",
-            ID.LTMF, 1, LTResource.山体淹没分析)
+            ComponentID.LTMF, 1, LTResource.山体淹没分析)
         {
             DownColor = new MColorMenuItem(this, Color.FromArgb(52, 58, 107), "淹没色彩(&F)", true);
             Gra.Def = new GH_Gradient(

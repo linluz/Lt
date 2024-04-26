@@ -62,7 +62,7 @@
     <Compile Include="Base\Component\GradientComponent.cs" />
     <Compile Include="Base\Const.cs" />
     <Compile Include="Base\Extensions\GhExtensions.cs" />
-    <Compile Include="Base\ID.cs" />
+    <Compile Include="Base\ComponentID.cs" />
     <Compile Include="GHComponent\Analysis\LTRA.cs" />
     <Compile Include="GHComponent\Analysis\LTCE.cs" />
     <Compile Include="GHComponent\Analysis\LTCF.cs" />
@@ -98,6 +98,15 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>LTResource.resx</DependentUpon>
     </Compile>
+    <Compile Include="Majas\MenuItemClass\MBooleanMenuItem.cs" />
+    <Compile Include="Majas\MenuItemClass\MColorMenuItem.cs" />
+    <Compile Include="Majas\MenuItemClass\MDoubleMenuItem.cs" />
+    <Compile Include="Majas\MenuItemClass\MGradientMenuItem.cs" />
+    <Compile Include="Majas\MenuItemClass\MGradientPresetMenuItem.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Majas\MenuItemClass\MIntegerMenuItem.cs" />
+    <Compile Include="Majas\MenuItemClass\MMenuItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

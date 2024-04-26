@@ -2,6 +2,7 @@
 using Lt.Base;
 using Lt.GHComponent.Analysis;
 using Lt.Majas;
+using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {
@@ -13,7 +14,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
     {
         public LTSA() : base("山路坡度分析", "LTSA",
             "分析",
-            ID.LTSA, nameof(LTRA), LTResource.山路坡度分析)
+            ComponentID.LTSA, nameof(LTRA), LTResource.山路坡度分析)
         {
             Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;

@@ -2,8 +2,8 @@
 using System.Windows.Forms;
 using GH_IO.Serialization;
 using Lt.GHComponent.Analysis;
-using Lt.Majas;
-using ID = Lt.Base.ID;
+using Lt.Majas.MenuItemClass;
+using Lt.Base;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {
@@ -15,7 +15,7 @@ namespace Lt.GHComponent.Osboletes.Osb2
     {
         public LTVL_Osb2() : base("视线分析", "LTVL",
             "分析",
-            ID.LTVL_Osb2, nameof(LTVL), LTResource.视线分析)
+            ComponentID.LTVL_Osb2, nameof(LTVL), LTResource.视线分析)
         {
             ColorO = new MColorMenuItem(this, Color.Red, "观察点色彩(&C)", rw: false);
             SizeO = new MDoubleMenuItem(this, 10, "观察点尺寸(&S)", rw: false);

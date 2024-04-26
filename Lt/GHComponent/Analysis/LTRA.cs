@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using Lt.Base;
 using Lt.Base.Component;
 using Lt.Base.Extensions;
+using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -25,7 +26,7 @@ namespace Lt.GHComponent.Analysis
         public LTRA() : base("山路坡度分析", "LTRA",
             "分析山路坡度并按角度赋予其对应色彩。\r\n双击：【坡度】【角度范围】切换为角度/弧度。\r\n烘焙：已按列成组已着色直线段",
             "分析",
-            ID.LTRA, 3, LTResource.山路坡度分析)
+            ComponentID.LTRA, 3, LTResource.山路坡度分析)
         {
             Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;

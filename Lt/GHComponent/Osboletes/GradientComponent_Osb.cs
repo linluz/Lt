@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using GH_IO.Serialization;
 using Grasshopper.GUI.Gradient;
 using Lt.Majas;
+using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Osboletes
 {

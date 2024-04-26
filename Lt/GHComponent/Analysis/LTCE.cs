@@ -22,7 +22,7 @@ namespace Lt.GHComponent.Analysis
         public LTCE() : base("高程分析(等高线)", "LTCE",
             "分析等高线的高程，并获得其可视化色彩。\r\n烘焙：已着色等高线",
             "分析",
-            ID.LTCE, 2, LTResource.等高线高程分析)
+            ComponentID.LTCE, 2, LTResource.等高线高程分析)
         {
             Gra.Def = Const.Gradient0.Duplicate();
             Gra.ReCom = true;
