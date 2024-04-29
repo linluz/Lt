@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using Lt.Majas;
 
 namespace Lt.Base.Component
 {

@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Grasshopper.Kernel;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Majas;
 using Rhino.Geometry;
 
 namespace Lt.GHComponent.Basis

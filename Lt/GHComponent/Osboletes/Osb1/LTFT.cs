@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using Lt.Base;
 using Lt.GHComponent.Analysis;
 
 namespace Lt.GHComponent.Osboletes.Osb1

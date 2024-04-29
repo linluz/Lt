@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Majas;
+using Grasshopper.Kernel.Types;
+using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Rhino;
 
 namespace Lt.GHComponent.Analysis
 {

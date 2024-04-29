@@ -1,8 +1,5 @@
 ﻿using System.Windows.Forms;
-using Lt.Base;
 using Lt.GHComponent.Analysis;
-using Lt.Majas;
-using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {

@@ -1,9 +1,5 @@
 ﻿using System;
 using Grasshopper.Kernel;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Base.Extensions;
-using Lt.Majas;
 using Rhino.Geometry;
 
 namespace Lt.GHComponent.Analysis

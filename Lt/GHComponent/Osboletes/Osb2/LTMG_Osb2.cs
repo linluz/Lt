@@ -1,6 +1,4 @@
-﻿using Lt.Base;
-using Lt.GHComponent.Analysis;
-using Lt.Majas;
+﻿using Lt.GHComponent.Analysis;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {

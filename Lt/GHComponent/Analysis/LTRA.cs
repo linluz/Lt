@@ -2,17 +2,12 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Grasshopper.Kernel.Types;
+using System.Windows.Forms;
 using Grasshopper.Kernel;
-using Lt.Majas;
+using Grasshopper.Kernel.Types;
+using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Rhino;
-using System.Windows.Forms;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Base.Extensions;
-using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -70,7 +65,7 @@ namespace Lt.GHComponent.Analysis
 
             List<Line> ll = la.SelectMany(t => t).ToList(); //全部的线段都摊平到一个列表里
 
-            var d = UD.Def ? Majas_Ex.R2A : 1;
+            var d = UD.Def ? ConvertConst.R2A : 1;
             
             //获取方向向量，计算角度,并保证是正的
             var a = ll.Select(t => t.Direction)

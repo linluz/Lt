@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Lt {
+namespace Lt.Resources {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Lt {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Lt.LTResource", typeof(LTResource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Lt.Resources.LTResource", typeof(LTResource).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

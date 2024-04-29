@@ -4,10 +4,6 @@ using System.Linq;
 using System.Windows.Forms;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Majas;
-using Lt.Majas.MenuItemClass;
 using Rhino.Geometry;
 
 namespace Lt.GHComponent.Basis

@@ -1,8 +1,6 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
 using Grasshopper.GUI.Gradient;
-using Lt.Majas;
-using Lt.Majas.MenuItemClass;
 using Rhino.Geometry;
 
 namespace Lt.Base.Component

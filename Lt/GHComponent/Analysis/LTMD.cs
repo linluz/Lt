@@ -2,14 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Grasshopper.Kernel;
-using Lt.Majas;
-using Rhino.Geometry;
 using System.Windows.Forms;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Base.Extensions;
-using Lt.Majas.MenuItemClass;
+using Grasshopper.Kernel;
+using Rhino.Geometry;
 
 namespace Lt.GHComponent.Analysis
 {

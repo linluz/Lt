@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Linq;
-using Grasshopper.Kernel;
-using Lt.Majas;
-using Rhino.Geometry;
 using System.Windows.Forms;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Base.Extensions;
-using Lt.Majas.MenuItemClass;
+using Grasshopper.Kernel;
+using Rhino.Geometry;
 
 namespace Lt.GHComponent.Analysis
 {
@@ -43,7 +38,7 @@ namespace Lt.GHComponent.Analysis
                 tm.Normals.ComputeNormals();//计算法向
             tm.VertexColors.Clear();//清除色彩
 
-            double d = UD.Def ? Majas_Ex.R2A : 1;//输出弧度还是角度
+            double d = UD.Def ? ConvertConst.R2A : 1;//输出弧度还是角度
             var ra = tm.Normals.Select(t => Math.Round(Math.Acos(t.Z) * d, 2)).ToArray();//法向转角度,保留两位小数
 
 

@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Drawing;
+using System.Windows.Forms;
 using Grasshopper.GUI.Gradient;
 using Grasshopper.Kernel;
-using Lt.Majas;
 using Rhino.Geometry;
-using System.Windows.Forms;
-using Lt.Base;
-using Lt.Base.Component;
-using Lt.Base.Extensions;
-using Lt.Majas.MenuItemClass;
 
 namespace Lt.GHComponent.Analysis
 {

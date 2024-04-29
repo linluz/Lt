@@ -2,8 +2,6 @@
 using System.Windows.Forms;
 using GH_IO.Serialization;
 using Lt.GHComponent.Analysis;
-using Lt.Majas.MenuItemClass;
-using Lt.Base;
 
 namespace Lt.GHComponent.Osboletes.Osb2
 {

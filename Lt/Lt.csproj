@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -56,6 +57,82 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\X\Majas\Component\Attributes\DoubleClick_Attributes.cs">
+      <Link>Majas\Component\Attributes\DoubleClick_Attributes.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Component\Interface\IMCom_DoubleClick.cs">
+      <Link>Majas\Component\Interface\IMCom_DoubleClick.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Component\MComponent.cs">
+      <Link>Majas\Component\MComponent.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Component\MDCComponent.cs">
+      <Link>Majas\Component\MDCComponent.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Component\MOComponent.cs">
+      <Link>Majas\Component\MOComponent.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\DrawingExtensions.cs">
+      <Link>Majas\Extensions\DrawingExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\Grasshopper\ComponentExtensions.cs">
+      <Link>Majas\Extensions\Grasshopper\ComponentExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\Grasshopper\GHExtensions.cs">
+      <Link>Majas\Extensions\Grasshopper\GHExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\Grasshopper\GradientExtensions.cs">
+      <Link>Majas\Extensions\Grasshopper\GradientExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\Grasshopper\ParamExtensions.cs">
+      <Link>Majas\Extensions\Grasshopper\ParamExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\MExtensions.cs">
+      <Link>Majas\Extensions\MExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Extensions\RHExtensions.cs">
+      <Link>Majas\Extensions\RHExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\GlobalUsing.cs">
+      <Link>Majas\GlobalUsing.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MBooleanMenuItem.cs">
+      <Link>Majas\MenuItem\MBooleanMenuItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MColorMenuItem.cs">
+      <Link>Majas\MenuItem\MColorMenuItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MDoubleMenuItem.cs">
+      <Link>Majas\MenuItem\MDoubleMenuItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MGradientMenuItem.cs">
+      <Link>Majas\MenuItem\MGradientMenuItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MGradientPresetMenuItem.cs">
+      <Link>Majas\MenuItem\MGradientPresetMenuItem.cs</Link>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MIntegerMenuItem.cs">
+      <Link>Majas\MenuItem\MIntegerMenuItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MenuItem\MMenuItem.cs">
+      <Link>Majas\MenuItem\MMenuItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\MException\ArgDefException.cs">
+      <Link>Majas\MException\ArgDefException.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Param\Param_Angle.cs">
+      <Link>Majas\Param\Param_Angle.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Param\StateTag\GH_StateTag_Degrees.cs">
+      <Link>Majas\Param\StateTag\GH_StateTag_Degrees.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Properties\Resources.Designer.cs">
+      <Link>Resources\Resources.Designer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Update_T.cs">
+      <Link>Majas\Update_T.cs</Link>
+    </Compile>
     <Compile Include="AssemblyPriority.cs" />
     <Compile Include="Base\Component\AComponent.cs" />
     <Compile Include="Base\Component\ADCComponent.cs" />
@@ -90,195 +167,192 @@
     <Compile Include="GHComponent\Osboletes\Osb2\LTMF_Osb2.cs" />
     <Compile Include="GHComponent\Osboletes\Osb2\LTMG_Osb2.cs" />
     <Compile Include="GHComponent\Osboletes\Osb2\LTVL_Osb2.cs" />
+    <Compile Include="GlobalUsing.cs" />
     <Compile Include="LtInfo.cs" />
-    <Compile Include="LtMajas.cs" />
     <Compile Include="GHComponent\Osboletes\Osb2\LTSA.cs" />
-    <Compile Include="LTResource.Designer.cs">
+    <Compile Include="Majas\Const\ConvertConst.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resources\LTResource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>LTResource.resx</DependentUpon>
     </Compile>
-    <Compile Include="Majas\MenuItemClass\MBooleanMenuItem.cs" />
-    <Compile Include="Majas\MenuItemClass\MColorMenuItem.cs" />
-    <Compile Include="Majas\MenuItemClass\MDoubleMenuItem.cs" />
-    <Compile Include="Majas\MenuItemClass\MGradientMenuItem.cs" />
-    <Compile Include="Majas\MenuItemClass\MGradientPresetMenuItem.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="Majas\MenuItemClass\MIntegerMenuItem.cs" />
-    <Compile Include="Majas\MenuItemClass\MMenuItem.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="LTResource.resx">
+    <EmbeddedResource Include="..\..\X\Majas\Properties\Resources.resx">
+      <Link>Resources\Resources.resx</Link>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\LTResource.resx">
       <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
       <LastGenOutput>LTResource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\CASS方格网法计算土方.png" />
+    <None Include="Resources\icon\CASS方格网法计算土方.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\玻璃栏杆02.png" />
+    <None Include="Resources\icon\玻璃栏杆02.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\参与计算的设计高程点汇总.png" />
+    <None Include="Resources\icon\参与计算的设计高程点汇总.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\单跑楼梯-定台阶.png" />
+    <None Include="Resources\icon\单跑楼梯-定台阶.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\单跑楼梯-均匀.png" />
+    <None Include="Resources\icon\单跑楼梯-均匀.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\道路边缘均匀取点.png" />
+    <None Include="Resources\icon\道路边缘均匀取点.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\等高线高程分析.png" />
+    <None Include="Resources\icon\等高线高程分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\等高线淹没分析.png" />
+    <None Include="Resources\icon\等高线淹没分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\格栅框架.png" />
+    <None Include="Resources\icon\格栅框架.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\函数起坡.png" />
+    <None Include="Resources\icon\函数起坡.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\简单玻璃栏杆.png" />
+    <None Include="Resources\icon\简单玻璃栏杆.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\简单横向栏杆.png" />
+    <None Include="Resources\icon\简单横向栏杆.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\简单竖向栏杆.png" />
+    <None Include="Resources\icon\简单竖向栏杆.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\建立原始高程点.png" />
+    <None Include="Resources\icon\建立原始高程点.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\精细格栅.png" />
+    <None Include="Resources\icon\精细格栅.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\均匀坡道.png" />
+    <None Include="Resources\icon\均匀坡道.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\璃栏杆01.png" />
+    <None Include="Resources\icon\璃栏杆01.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\林冠线.png" />
+    <None Include="Resources\icon\林冠线.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\平铺嵌板-曲面.png" />
+    <None Include="Resources\icon\平铺嵌板-曲面.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\平铺嵌板-网格.png" />
+    <None Include="Resources\icon\平铺嵌板-网格.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\剖面线起坡.png" />
+    <None Include="Resources\icon\剖面线起坡.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\倾斜栏杆.png" />
+    <None Include="Resources\icon\倾斜栏杆.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\曲面偏移实体.png" />
+    <None Include="Resources\icon\曲面偏移实体.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\曲线台阶.png" />
+    <None Include="Resources\icon\曲线台阶.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\人工硬质场地高程点.png" />
+    <None Include="Resources\icon\人工硬质场地高程点.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\山路坡度分析.png" />
+    <None Include="Resources\icon\山路坡度分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\山体高程分析.png" />
+    <None Include="Resources\icon\山体高程分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\山体坡度分析.png" />
+    <None Include="Resources\icon\山体坡度分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\山体坡向分析.png" />
+    <None Include="Resources\icon\山体坡向分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\山体淹没分析.png" />
+    <None Include="Resources\icon\山体淹没分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\设计自然土地高程点.png" />
+    <None Include="Resources\icon\设计自然土地高程点.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\实时山路绘制反馈.png" />
+    <None Include="Resources\icon\实时山路绘制反馈.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\视线分析.png" />
+    <None Include="Resources\icon\视线分析.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\输出-.dat格式.png" />
+    <None Include="Resources\icon\输出-.dat格式.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\双跑楼梯.png" />
+    <None Include="Resources\icon\双跑楼梯.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\填挖量可视化.png" />
+    <None Include="Resources\icon\填挖量可视化.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\像素法计算土方.png" />
+    <None Include="Resources\icon\像素法计算土方.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\小数点位数.png" />
+    <None Include="Resources\icon\小数点位数.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\延伸至曲线.png" />
+    <None Include="Resources\icon\延伸至曲线.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\云线.png" />
+    <None Include="Resources\icon\云线.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\折面格栅.png" />
+    <None Include="Resources\icon\折面格栅.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\折面框架.png" />
+    <None Include="Resources\icon\折面框架.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\折线成管.png" />
+    <None Include="Resources\icon\折线成管.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\自动山路.png" />
+    <None Include="Resources\icon\自动山路.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\自动山路台阶.png" />
+    <None Include="Resources\icon\自动山路台阶.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ltlogo16.png" />
+    <None Include="Resources\icon\ltlogo16.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ltlogo24.png" />
+    <None Include="Resources\icon\ltlogo24.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\FuzzySprite_64x64.png" />
+    <None Include="Resources\icon\FuzzySprite_64x64.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\PointStyle_20x20.png" />
+    <None Include="Resources\icon\PointStyle_20x20.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\EyeHight_20x20.png" />
+    <None Include="Resources\icon\EyeHight_20x20.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Gradient_20x20.png" />
+    <None Include="Resources\icon\Gradient_20x20.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Sprite_20x20.png" />
+    <None Include="Resources\icon\Sprite_20x20.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Modifier_Degrees_16x16.png" />
+    <None Include="Resources\icon\Modifier_Degrees_16x16.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\AngleParam 24.png" />
+    <None Include="Resources\icon\AngleParam 24.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Degrees_16.png" />
+    <None Include="Resources\icon\Degrees_16.png" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -302,5 +376,6 @@ Erase "$(TargetPath)"</PostBuildEvent>
     <StartArguments>
     </StartArguments>
     <StartAction>Program</StartAction>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 </Project>
