@@ -1,15 +1,14 @@
 ﻿using Grasshopper;
 using Grasshopper.Kernel;
 
-namespace Lt
+namespace Lt;
+
+// ReSharper disable once UnusedMember.Global
+public class AssemblyPriority : GH_AssemblyPriority
 {
-    // ReSharper disable once UnusedMember.Global
-    public class AssemblyPriority : GH_AssemblyPriority
+    public override GH_LoadingInstruction PriorityLoad()
     {
-        public override GH_LoadingInstruction PriorityLoad()
-        {
-            Instances.ComponentServer.AddCategoryIcon("Lt", LTResource.ltlogo16);
-            return GH_LoadingInstruction.Proceed;
-        }
+        Instances.ComponentServer.AddCategoryIcon("Lt", LTResource.ltlogo16);
+        return GH_LoadingInstruction.Proceed;
     }
 }

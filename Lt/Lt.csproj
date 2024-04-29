@@ -72,6 +72,9 @@
     <Compile Include="..\..\X\Majas\Component\MOComponent.cs">
       <Link>Majas\Component\MOComponent.cs</Link>
     </Compile>
+    <Compile Include="..\..\X\Majas\Const\ConvertConst.cs">
+      <Link>Majas\Const\ConvertConst.cs</Link>
+    </Compile>
     <Compile Include="..\..\X\Majas\Extensions\DrawingExtensions.cs">
       <Link>Majas\Extensions\DrawingExtensions.cs</Link>
     </Compile>
@@ -170,7 +173,6 @@
     <Compile Include="GlobalUsing.cs" />
     <Compile Include="LtInfo.cs" />
     <Compile Include="GHComponent\Osboletes\Osb2\LTSA.cs" />
-    <Compile Include="Majas\Const\ConvertConst.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\LTResource.Designer.cs">
       <AutoGen>True</AutoGen>
