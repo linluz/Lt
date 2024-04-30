@@ -153,6 +153,8 @@
     <Compile Include="GHComponent\Analysis\LTRW.cs" />
     <Compile Include="GHComponent\Analysis\LTVL.cs" />
     <Compile Include="GHComponent\Basis\CanopyC.cs" />
+    <Compile Include="GHComponent\Basis\DecimalPlaces.cs" />
+    <Compile Include="GHComponent\Basis\OffsetB.cs" />
     <Compile Include="GHComponent\Basis\RCloud.cs" />
     <Compile Include="Base\Extensions\RhGeoExtensions.cs" />
     <Compile Include="Base\Extensions\StringExtensions.cs" />

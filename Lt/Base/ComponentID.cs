@@ -27,7 +27,9 @@ public static class ComponentID
     internal const string LTRA = "{8D99052C-7D8C-4A44-8438-B2E7147A471D}";
     internal const string LTRW = "{830EE783-C3CB-4ED9-A7D2-F50503E617E7}";
 
-    internal const string RCloud = "{E23B1B96-51E1-44C2-9B32-EA077F0B059D}";
-    internal const string CanopyC = "{79653B95-A6D9-498B-9398-9B732E56C021}";
+    internal const string LTRCloud = "{E23B1B96-51E1-44C2-9B32-EA077F0B059D}";
+    internal const string LTCanopyC = "{79653B95-A6D9-498B-9398-9B732E56C021}";
+    internal const string LTDecimalP = "{F53040AB-1B43-4CAD-9FD1-D104C1B1BB94}";
+    internal const string LTOffsetB = "{58DFE155-2C69-4614-8BE6-48ECFAA4D720}";
     //internal const string 
 }
