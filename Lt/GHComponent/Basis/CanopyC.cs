@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Majas.Utility.Population;
 using Rhino.Geometry;
 
 namespace Lt.GHComponent.Basis;
@@ -28,9 +28,9 @@ public class CanopyC : ADCComponent
     {
         pm.AddIP(ParT.Curve, "轮廓", "B", "拾取基础线框（树林边缘）");
         pm.AddIP(ParT.Number, "半径", "R", "每棵树的树冠半径");
-        pm.AddIP(ParT.Number, "密度", "D", "每个树冠面积下所含的树量");
+        pm.AddIP(ParT.Number, "密度", "D", "每棵树的占地密度");
         pm.AddIP(ParT.Number, "剔除", "L", "小于此长度的碎线将被剔除");
-        pm.AddIP(ParT.Integer, "种子", "S", "种树的随机种子");
+        pm.AddIP(ParT.Integer, "种子", "S", "种树的随机种子,默认653", def: 653);
 
         pm.AddOP(ParT.Group, "林冠线", "C", "生成的成组的林冠线");
     }
@@ -43,45 +43,37 @@ public class CanopyC : ADCComponent
             !DA.OutData(3, out double l) || RMSmaller(l, 0, 3, equal: true) ||
             !DA.OutData(4, out int s)) return;
         #endregion
-
-        var TreeArea = r * r * Math.PI;
+        //bug 代码已正确 但运行效率是是原电池的7倍，待查
+        var TreeArea = r * r * Math.PI;//树冠面积
+        var TreeArea2 = TreeArea * d;//每颗树所占的树冠面积
         Curve[] bs = [b];
         if (Restrict.Def)
         {
             b.TryGetPlane(out Plane plane);
-            bs = b.Offset(plane, -r, DocumentTolerance(), CurveOffsetCornerStyle.Sharp)//偏移出树心限制线
-                .Where(t => t is { IsValid: true }).ToArray();//剔除为null或无效的值
+            bs = b.Offset(plane, -r, DocumentTolerance(), CurveOffsetCornerStyle.Sharp) //偏移出树心限制线
+                .Where(t => t is { IsValid: true, IsClosed: true })//剔除为null或无效或不闭合的线
+                .ToArray();
         }
-
-        var ba = bs.Select(t => new { V = t, A = Brep.CreatePlanarBreps(b)[0].GetArea() })
-            .Where(t => t.A > TreeArea).ToArray();//剔除面积过小的
-
         var group = new GH_GeometryGroup();
-        foreach (var ta in ba)
-        {
-            //树量=轮廓面积/(树冠面积/单冠密度)
-            var count = (int)Math.Floor(ta.A / (TreeArea / d));
-            b = ta.V;
-            BoundingBox box = b.GetBoundingBox(true);
-            int c0 = 0;
-            var ran = new Random(s);
-            List<Point3d> pl = new(count);
-            do
+        var ra = bs.Where(c => c.GetLength() > l)//剔除过短的线
+            .Select(c =>
             {
-                var p = new Point3d(ran.NextNumber(box.Min.X, box.Max.X), ran.NextNumber(box.Min.Y, box.Max.Y), 0);
-                PointContainment pc = b.Contains(p);
-                if (pc is PointContainment.Unset or not PointContainment.Outside)
-                    continue;
-                pl.Add(p);
-                c0++;
-            } while (c0 == count);
+                Brep sur = Brep.CreatePlanarBreps(c)[0];
+                var count = (int)(sur.GetArea() / TreeArea2);//树量=面积/(树冠面积/单冠密度)
+                return new BrepPopulation(sur, s).Populate(count, null)//获取随机点
+                    .Where(p => b.Contains(p) is PointContainment.Coincident or PointContainment.Inside) //保留内部或在边界上的点
+                    .Select(p => new Circle(p, r).ToNurbsCurve()) //转换为圆
+                    .ToArray();
+            })
+            .Select(t =>
+                Curve.CreateBooleanUnion(t) //转成圆组并求交集
+                    .Where(t0 => t0.GetLength() >= l)//剔除长度短于l
+                    .Select(t0 => new GH_Curve(t0))
+            )
+            .SelectMany(t => t)
+            .ToArray();
 
-            var ca = Curve.CreateBooleanUnion(pl.Select(t => new Circle(t, r).ToNurbsCurve()))
-                //转成圆组并求交集
-                .Where(t => t.GetLength() >= d)//剔除长度短于d
-                .Select(t => new GH_Curve(t)).ToArray();//转换成gh类型
-            group.Objects.AddRange(ca);
-        }
+        group.Objects.AddRange(ra);
 
         DA.SetData(0, group);
     }

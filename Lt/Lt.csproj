@@ -136,6 +136,18 @@
     <Compile Include="..\..\X\Majas\Update_T.cs">
       <Link>Majas\Update_T.cs</Link>
     </Compile>
+    <Compile Include="..\..\X\Majas\Utility\Population\BrepPopulation.cs">
+      <Link>Majas\Utility\Population\BrepPopulation.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Utility\Population\CurvePopulation.cs">
+      <Link>Majas\Utility\Population\CurvePopulation.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Utility\Population\MeshPopulation.cs">
+      <Link>Majas\Utility\Population\MeshPopulation.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Utility\Population\PopulationSolver.cs">
+      <Link>Majas\Utility\Population\PopulationSolver.cs</Link>
+    </Compile>
     <Compile Include="AssemblyPriority.cs" />
     <Compile Include="Base\Component\AComponent.cs" />
     <Compile Include="Base\Component\ADCComponent.cs" />
