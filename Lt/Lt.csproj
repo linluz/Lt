@@ -158,6 +158,7 @@
     <Compile Include="GHComponent\Basis\RCloud.cs" />
     <Compile Include="Base\Extensions\RhGeoExtensions.cs" />
     <Compile Include="Base\Extensions\StringExtensions.cs" />
+    <None Include="test.cs" />
     <Compile Include="GHComponent\Osboletes\AOComponent.cs" />
     <Compile Include="GHComponent\Osboletes\Osb1\LTCF_Osb.cs" />
     <Compile Include="GHComponent\Osboletes\Osb1\LTFT.cs" />
