@@ -75,6 +75,9 @@
     <Compile Include="..\..\X\Majas\Const\ConvertConst.cs">
       <Link>Majas\Const\ConvertConst.cs</Link>
     </Compile>
+    <Compile Include="..\..\X\Majas\Const\Method.cs">
+      <Link>Majas\Const\Method.cs</Link>
+    </Compile>
     <Compile Include="..\..\X\Majas\Extensions\DrawingExtensions.cs">
       <Link>Majas\Extensions\DrawingExtensions.cs</Link>
     </Compile>
@@ -147,6 +150,9 @@
     </Compile>
     <Compile Include="..\..\X\Majas\Utility\Population\PopulationSolver.cs">
       <Link>Majas\Utility\Population\PopulationSolver.cs</Link>
+    </Compile>
+    <Compile Include="..\..\X\Majas\Utility\RhMethodInfo.cs">
+      <Link>Majas\Utility\RhMethodInfo.cs</Link>
     </Compile>
     <Compile Include="AssemblyPriority.cs" />
     <Compile Include="Base\Component\AComponent.cs" />
