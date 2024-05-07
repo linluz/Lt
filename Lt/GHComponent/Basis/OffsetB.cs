@@ -11,7 +11,7 @@ namespace Lt.GHComponent.Basis;
 public class OffsetB() : AComponent("偏移曲面", "LTOffsetB",
     "偏移曲面成实体",
     "基础",
-    ComponentID.LTOffsetB, 1, LTResource.曲面偏移实体)
+    ComponentID.LTOffsetB, 1, Resources.曲面偏移实体)
 {
     protected override void AddParameter(ParamManager pm)
     {

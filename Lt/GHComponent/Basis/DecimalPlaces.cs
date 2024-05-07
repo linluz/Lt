@@ -10,7 +10,7 @@ namespace Lt.GHComponent.Basis;
 public class DecimalPlaces() : AComponent("小数位数", "LTDecimalP",
     "控制保留的小数位数",
     "基础",
-    ComponentID.LTDecimalP, 1, LTResource.小数点位数)
+    ComponentID.LTDecimalP, 1, Resources.小数点位数)
 {
     protected override void AddParameter(ParamManager pm)
     {

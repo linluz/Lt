@@ -13,7 +13,7 @@ namespace Lt.GHComponent.Basis;
 public class RCloud() : AComponent("云线", "LTRCloud",
     "拾取基础线框自动生成云线,可一次拾取多根线框",
     "基础",
-    ComponentID.LTRCloud, 1, LTResource.云线)
+    ComponentID.LTRCloud, 1, Resources.云线)
 {
     //AddIntegerParameter 和 item 都成变量
 

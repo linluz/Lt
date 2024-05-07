@@ -10,7 +10,7 @@ public sealed class LTMG_Osb2 : GradientComponent_Osb
 {
     public LTMG_Osb2() : base("坡度分析(网格)", "LTMG",
         "分析",
-        ComponentID.LTMG_Osb2, nameof(LTMG), LTResource.山体坡度分析)
+        ComponentID.LTMG_Osb2, nameof(LTMG), Resources.山体坡度分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;

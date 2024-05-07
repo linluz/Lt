@@ -11,7 +11,7 @@ public sealed class LTME_Osb2 : GradientComponent_Osb
 {
     public LTME_Osb2() : base("高程分析(网格)", "LTME",
         "分析",
-        ComponentID.LTME_Osb2, nameof(LTME), icon: LTResource.山体高程分析)
+        ComponentID.LTME_Osb2, nameof(LTME), icon: Resources.山体高程分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;

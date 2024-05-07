@@ -26,7 +26,7 @@ public sealed class LTRW : GradientComponent
         "实时反馈所绘制的山路坡度是否合理，\r\n不合理的区域用提示圆标注出来。" +
         "\r\n注意:绘制需要在top视图【road】图层内。\r\n双击：自动建立【road】图层并切换为当前图层。\r\n烘焙：已按输入线成组已着色直线段",
         "分析",
-        ComponentID.LTRW, 3, LTResource.实时山路绘制反馈)
+        ComponentID.LTRW, 3, Resources.实时山路绘制反馈)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = false;

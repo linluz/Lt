@@ -8,7 +8,7 @@ public class AssemblyPriority : GH_AssemblyPriority
 {
     public override GH_LoadingInstruction PriorityLoad()
     {
-        Instances.ComponentServer.AddCategoryIcon("Lt", LTResource.ltlogo16);
+        Instances.ComponentServer.AddCategoryIcon("Lt", Resources.ltlogo16);
         return GH_LoadingInstruction.Proceed;
     }
 }

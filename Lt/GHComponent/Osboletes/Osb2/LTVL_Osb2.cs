@@ -13,7 +13,7 @@ public sealed class LTVL_Osb2 : AOComponent
 {
     public LTVL_Osb2() : base("视线分析", "LTVL",
         "分析",
-        ComponentID.LTVL_Osb2, nameof(LTVL), LTResource.视线分析)
+        ComponentID.LTVL_Osb2, nameof(LTVL), Resources.视线分析)
     {
         ColorO = new MColorMenuItem(this, Color.Red, "观察点色彩(&C)", rw: false);
         SizeO = new MDoubleMenuItem(this, 10, "观察点尺寸(&S)", rw: false);
@@ -35,10 +35,10 @@ public sealed class LTVL_Osb2 : AOComponent
     protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
     {
         Menu_Color(menu, ref ColorO);
-        Menu_Double(menu, ref SizeO, icon: LTResource.PointStyle_20x20);
+        Menu_Double(menu, ref SizeO, icon: Resources.PointStyle_20x20);
         Menu_Color(menu, ref ColorV);
-        Menu_Double(menu, ref SizeV, icon: LTResource.PointStyle_20x20);
-        Menu_Double(menu, ref EyeHight, "人眼高度", icon: LTResource.EyeHight_20x20);
+        Menu_Double(menu, ref SizeV, icon: Resources.PointStyle_20x20);
+        Menu_Double(menu, ref EyeHight, "人眼高度", icon: Resources.EyeHight_20x20);
     }
     public override bool Read(GH_IReader reader)
     {

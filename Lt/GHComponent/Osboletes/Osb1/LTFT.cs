@@ -8,7 +8,7 @@ namespace Lt.GHComponent.Osboletes.Osb1;
 /// </summary>
 // ReSharper disable once UnusedMember.Global
 public sealed class LTFT()
-    : AOComponent("地形网格淹没分析", "LTFT", "分析", ComponentID.LTMF_Osb, nameof(LTMF), LTResource.山体淹没分析)
+    : AOComponent("地形网格淹没分析", "LTFT", "分析", ComponentID.LTMF_Osb, nameof(LTMF), Resources.山体淹没分析)
 {
     protected override void AddParameter(ParamManager pm)
     {

@@ -21,7 +21,7 @@ public sealed class LTRA : GradientComponent, IMCom_DoubleClick
     public LTRA() : base("山路坡度分析", "LTRA",
         "分析山路坡度并按角度赋予其对应色彩。\r\n双击：【坡度】【角度范围】切换为角度/弧度。\r\n烘焙：已按列成组已着色直线段",
         "分析",
-        ComponentID.LTRA, 3, LTResource.山路坡度分析)
+        ComponentID.LTRA, 3, Resources.山路坡度分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;
@@ -88,7 +88,7 @@ public sealed class LTRA : GradientComponent, IMCom_DoubleClick
     {
         base.AppendAdditionalComponentMenuItems(menu);
         Menu_Boolean(menu, ref GI, "默认启用，此时渐变色彩范围对应实际的角度范围。\r\n不启用时，范围对应0-90º", click: (_, _) => UpdateC());
-        Menu_Boolean(menu, ref UD, "勾选时,【坡度】【角度范围】输出端输出度,否则为弧度", LTResource.Degrees_16,
+        Menu_Boolean(menu, ref UD, "勾选时,【坡度】【角度范围】输出端输出度,否则为弧度", Resources.Degrees_16,
             (_, _) => UD.ReplacePDesc(true, "（弧度）", "（度）", 1, 3));
     }
 

@@ -11,7 +11,7 @@ public sealed class LTMD_Osb2 : AOComponent
     public LTMD_Osb2()
         : base("坡向分析(网格)", "LTMD",
             "分析",
-            ComponentID.LTMD_Osb2, nameof(LTMD), LTResource.山体坡向分析)
+            ComponentID.LTMD_Osb2, nameof(LTMD), Resources.山体坡向分析)
     {
         Shade = new MBooleanMenuItem(this, true, "使用面着色(&F)", true, rw: false);
     }

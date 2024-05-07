@@ -16,7 +16,7 @@ public sealed class LTMF_Osb2 : GradientComponent_Osb
     public LTMF_Osb2() : base(
         "淹没分析(网格)", "LTMF",
         "分析",
-        ComponentID.LTMF_Osb2, nameof(LTMF), LTResource.山体淹没分析)
+        ComponentID.LTMF_Osb2, nameof(LTMF), Resources.山体淹没分析)
     {
         Gra.Def = new GH_Gradient(
             [0, 0.16, 0.33, 0.5, 0.67, 0.84, 1],

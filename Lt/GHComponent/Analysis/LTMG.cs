@@ -16,7 +16,7 @@ public sealed class LTMG : GradientComponent, IMCom_DoubleClick
     public LTMG() : base("坡度分析(网格)", "LTMG",
         "山地地形坡度分析,\r\n双击：【坡度范围】切换为角度/弧度",
         "分析",
-        ComponentID.LTMG, 1, LTResource.山体坡度分析)
+        ComponentID.LTMG, 1, Resources.山体坡度分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;
@@ -53,7 +53,7 @@ public sealed class LTMG : GradientComponent, IMCom_DoubleClick
     {
         base.AppendAdditionalComponentMenuItems(menu);
         Menu_Boolean(menu, ref GI, "默认启用，此时渐变色彩范围对应实际的角度范围。\r\n不启用时，范围对应0-90º");
-        Menu_Boolean(menu, ref UD, "勾选时,【角度】输出端输出度,否则为弧度", LTResource.Degrees_16,
+        Menu_Boolean(menu, ref UD, "勾选时,【角度】输出端输出度,否则为弧度", Resources.Degrees_16,
             (_, _) => UD.ReplacePDesc(true, "（弧度）", "（度）", 1));
     }
 

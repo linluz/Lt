@@ -22,7 +22,7 @@ public sealed class LTVL : AComponent
     public LTVL() : base("视线分析", "LTVL",
         "分析在山地某处的可见范围,cpu线程数大于1时自动调用多核计算",
         "分析",
-        ComponentID.LTVL, 4, LTResource.视线分析)
+        ComponentID.LTVL, 4, Resources.视线分析)
     {
         ColorO = new MColorMenuItem(this, Color.Red, "观察点色彩(&C)");
         SizeO = new MDoubleMenuItem(this, 10, "观察点尺寸(&S)");
@@ -141,10 +141,10 @@ public sealed class LTVL : AComponent
     protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
     {
         Menu_Color(menu, ref ColorO);
-        Menu_Double(menu, ref SizeO, icon: LTResource.PointStyle_20x20);
+        Menu_Double(menu, ref SizeO, icon: Resources.PointStyle_20x20);
         Menu_Color(menu, ref ColorV);
-        Menu_Double(menu, ref SizeV, icon: LTResource.PointStyle_20x20);
-        Menu_Double(menu, ref EyeHight, "人眼高度", icon: LTResource.EyeHight_20x20);
+        Menu_Double(menu, ref SizeV, icon: Resources.PointStyle_20x20);
+        Menu_Double(menu, ref EyeHight, "人眼高度", icon: Resources.EyeHight_20x20);
         Menu_Boolean(menu, ref Ov, "控制是否显示障碍物");
         Menu_BColor(Ov, ref Oc);
     }
@@ -195,7 +195,7 @@ public sealed class LTVL : AComponent
         };
 
         displayBitmapDrawList.SetPoints(GetOutByItem<GH_Point>(1).Select(t => t.Value), Attributes.Selected ? args.WireColour_Selected : ColorV.Def);
-        args.Display.DrawSprites(new DisplayBitmap(LTResource.FuzzySprite_64x64), displayBitmapDrawList,
+        args.Display.DrawSprites(new DisplayBitmap(Resources.FuzzySprite_64x64), displayBitmapDrawList,
             Convert.ToSingle(SizeV.Def), true);
     }
 

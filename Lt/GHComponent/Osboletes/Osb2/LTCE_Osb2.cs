@@ -10,7 +10,7 @@ public sealed class LTCE_Osb2 : GradientComponent_Osb
 {
     public LTCE_Osb2() : base("高程分析(等高线)", "LTCE",
         "分析",
-        ComponentID.LTCE_Osb2, nameof(LTCE), LTResource.等高线高程分析)
+        ComponentID.LTCE_Osb2, nameof(LTCE), Resources.等高线高程分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;

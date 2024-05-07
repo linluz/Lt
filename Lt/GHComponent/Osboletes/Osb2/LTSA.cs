@@ -11,7 +11,7 @@ public sealed class LTSA : GradientComponent_Osb
 {
     public LTSA() : base("山路坡度分析", "LTSA",
         "分析",
-        ComponentID.LTSA, nameof(LTRA), LTResource.山路坡度分析)
+        ComponentID.LTSA, nameof(LTRA), Resources.山路坡度分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;

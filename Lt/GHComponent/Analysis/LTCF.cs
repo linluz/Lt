@@ -21,7 +21,7 @@ public sealed class LTCF : AComponent
     public LTCF() : base("淹没分析(等高线)", "LTCF",
         "通过等高线数据分析地形的淹没情况。\r\n烘焙：已着色已群组淹没/未淹曲线",
         "分析",
-        ComponentID.LTCF, 2, LTResource.等高线淹没分析)
+        ComponentID.LTCF, 2, Resources.等高线淹没分析)
     {
         UpColor = new MColorMenuItem(this, Color.White, "未淹色彩(&U)");
         DownColor = new MColorMenuItem(this, Color.FromArgb(59, 104, 156), "淹没色彩(&F)");

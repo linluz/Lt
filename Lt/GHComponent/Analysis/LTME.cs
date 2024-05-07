@@ -14,7 +14,7 @@ public sealed class LTME : GradientComponent
     public LTME() : base("高程分析(网格)", "LTME",
         "山地地形高程分析",
         "分析",
-        ComponentID.LTME, icon: LTResource.山体高程分析)
+        ComponentID.LTME, icon: Resources.山体高程分析)
     {
         Gra.Def = Const.Gradient0.Duplicate();
         Gra.ReCom = true;

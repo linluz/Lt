@@ -9,7 +9,7 @@ public class LtInfo : GH_AssemblyInfo
 {
     public override string Name => "Lt";
 
-    public override Bitmap Icon => LTResource.ltlogo24;
+    public override Bitmap Icon => Resources.ltlogo24;
 
     public override string Description => "一些景观方面的工具";
 

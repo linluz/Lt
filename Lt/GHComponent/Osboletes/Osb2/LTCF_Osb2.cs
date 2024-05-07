@@ -13,7 +13,7 @@ public sealed class LTCF_Osb2 : AOComponent
 {
     public LTCF_Osb2() : base("淹没分析(等高线)", "LTCF",
         "分析",
-        ComponentID.LTCF_Osb2, nameof(LTCF), LTResource.等高线淹没分析)
+        ComponentID.LTCF_Osb2, nameof(LTCF), Resources.等高线淹没分析)
     {
         UpColor = new MColorMenuItem(this, Color.White, "未淹色彩(&U)", rw: false);
         DownColor = new MColorMenuItem(this, Color.FromArgb(59, 104, 156), "淹没色彩(&F)", rw: false);
